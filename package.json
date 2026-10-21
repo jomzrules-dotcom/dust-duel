@@ -1,0 +1,8 @@
+{
+  "name": "dust-duel",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "1v1 robot-vacuum cleaning duel (browser, Three.js, Node WebSocket server)",
+  "scripts": { "start": "node server/server.js", "test": "node test/run.mjs" }
+}

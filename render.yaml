@@ -1,0 +1,12 @@
+# One-click deploy of the game server (with online play) on Render's free tier:
+# Render dashboard → New → Blueprint → pick this repo. The free instance sleeps after 15 minutes idle
+# and takes ~30-60 s to wake on the first visit.
+services:
+  - type: web
+    name: dust-duel
+    runtime: node
+    region: singapore
+    plan: free
+    buildCommand: ""
+    startCommand: node server/server.js
+    healthCheckPath: /api/info

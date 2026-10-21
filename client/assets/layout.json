@@ -1,0 +1,304 @@
+{
+  "name": "House",
+  "size": {
+    "w": 24,
+    "h": 18
+  },
+  "wallHeight": 1.5,
+  "rooms": [
+    {
+      "name": "Bedroom",
+      "x0": -11.8,
+      "z0": -8.8,
+      "x1": -0.2,
+      "z1": -0.2,
+      "start": 1
+    },
+    {
+      "name": "Living room",
+      "x0": 0.2,
+      "z0": -8.8,
+      "x1": 11.8,
+      "z1": -0.2
+    },
+    {
+      "name": "Study",
+      "x0": -11.8,
+      "z0": 0.2,
+      "x1": -0.2,
+      "z1": 8.8
+    },
+    {
+      "name": "Kitchen",
+      "x0": 0.2,
+      "z0": 0.2,
+      "x1": 11.8,
+      "z1": 8.8,
+      "start": 2
+    }
+  ],
+  "spawnOffset": 0.2,
+  "walls": [
+    {
+      "x0": -12,
+      "z0": -9.0,
+      "x1": 12,
+      "z1": -8.6
+    },
+    {
+      "x0": -12,
+      "z0": 8.6,
+      "x1": 12,
+      "z1": 9.0
+    },
+    {
+      "x0": -12.0,
+      "z0": -9,
+      "x1": -11.6,
+      "z1": 9
+    },
+    {
+      "x0": 11.6,
+      "z0": -9,
+      "x1": 12.0,
+      "z1": 9
+    },
+    {
+      "x0": -0.2,
+      "z0": -9,
+      "x1": 0.2,
+      "z1": -6.5
+    },
+    {
+      "x0": -0.2,
+      "z0": -3.5,
+      "x1": 0.2,
+      "z1": 3.5
+    },
+    {
+      "x0": -0.2,
+      "z0": 6.5,
+      "x1": 0.2,
+      "z1": 9
+    },
+    {
+      "x0": -12,
+      "z0": -0.2,
+      "x1": -7.5,
+      "z1": 0.2
+    },
+    {
+      "x0": -4.5,
+      "z0": -0.2,
+      "x1": 4.5,
+      "z1": 0.2
+    },
+    {
+      "x0": 7.5,
+      "z0": -0.2,
+      "x1": 12,
+      "z1": 0.2
+    }
+  ],
+  "furniture": [
+    {
+      "model": "plant",
+      "x": -11.025,
+      "z": 8.045,
+      "rot": 0,
+      "w": 1.15,
+      "d": 1.11,
+      "blocks": true
+    },
+    {
+      "model": "wardrobe",
+      "x": -10.665,
+      "z": 4.5,
+      "rot": 0,
+      "w": 1.87,
+      "d": 4.0,
+      "blocks": true
+    },
+    {
+      "model": "desk",
+      "x": -6.0,
+      "z": 8.1,
+      "rot": 0,
+      "w": 2.0,
+      "d": 1.0,
+      "blocks": true
+    },
+    {
+      "model": "bookshelf",
+      "x": -3.3,
+      "z": 8.335,
+      "rot": 0,
+      "w": 1.8,
+      "d": 0.53,
+      "blocks": true
+    },
+    {
+      "model": "counter",
+      "x": 4.25,
+      "z": 8.04,
+      "rot": 0,
+      "w": 8.1,
+      "d": 1.12,
+      "blocks": true
+    },
+    {
+      "model": "island",
+      "x": 6.0,
+      "z": 4.5,
+      "rot": 0,
+      "w": 3.15,
+      "d": 1.12,
+      "blocks": true
+    },
+    {
+      "model": "fridge",
+      "x": 8.75,
+      "z": 8.06,
+      "rot": 90,
+      "w": 1.08,
+      "d": 0.9,
+      "blocks": true
+    },
+    {
+      "model": "wardrobe",
+      "x": 10.665,
+      "z": 5.0,
+      "rot": 180,
+      "w": 1.87,
+      "d": 4.0,
+      "blocks": true
+    },
+    {
+      "model": "plant",
+      "x": 10.91,
+      "z": 8.045,
+      "rot": 0,
+      "w": 1.15,
+      "d": 1.11,
+      "blocks": true
+    },
+    {
+      "model": "plant",
+      "x": -10.89,
+      "z": -8.045,
+      "rot": 0,
+      "w": 1.15,
+      "d": 1.11,
+      "blocks": true
+    },
+    {
+      "model": "bed",
+      "x": -7.8,
+      "z": -6.25,
+      "rot": 180,
+      "w": 4.0,
+      "d": 4.7,
+      "blocks": true
+    },
+    {
+      "model": "nightstand",
+      "x": -3.45,
+      "z": -8.06,
+      "rot": 0,
+      "w": 1.0,
+      "d": 1.08,
+      "blocks": true
+    },
+    {
+      "model": "sofa",
+      "x": 5.97,
+      "z": -4.7,
+      "rot": 0,
+      "w": 4.0,
+      "d": 1.8,
+      "blocks": true
+    },
+    {
+      "model": "coffee_table",
+      "x": 5.9,
+      "z": -6.68,
+      "rot": 0,
+      "w": 2.0,
+      "d": 1.0,
+      "blocks": true
+    },
+    {
+      "model": "tv_stand",
+      "x": 6.0,
+      "z": -8.35,
+      "rot": 0,
+      "w": 1.8,
+      "d": 0.5,
+      "blocks": true
+    },
+    {
+      "model": "plant",
+      "x": 11.025,
+      "z": -8.045,
+      "rot": 0,
+      "w": 1.15,
+      "d": 1.11,
+      "blocks": true
+    }
+  ],
+  "docks": [
+    {
+      "x": -11.3,
+      "z": -1.0,
+      "rot": 0
+    },
+    {
+      "x": 11.3,
+      "z": 1.0,
+      "rot": 180
+    }
+  ],
+  "powerupSpots": [
+    {
+      "x": 0,
+      "z": -5
+    },
+    {
+      "x": 0,
+      "z": 5
+    },
+    {
+      "x": -6,
+      "z": 0
+    },
+    {
+      "x": 6,
+      "z": 0
+    },
+    {
+      "x": -8.5,
+      "z": -2.0
+    },
+    {
+      "x": 8.5,
+      "z": 2.0
+    },
+    {
+      "x": 9.0,
+      "z": -5.0
+    },
+    {
+      "x": -9.0,
+      "z": 5.0
+    },
+    {
+      "x": -3.0,
+      "z": -2.5
+    },
+    {
+      "x": 3.0,
+      "z": 2.5
+    }
+  ],
+  "note": "Game coords: x right, z down on screen; Blender y = -z. rot = degrees around the up axis. Four rooms in a 2x2 grid with single inner walls; each room has two doorways (the center crossing is closed). All furniture is solid. Symmetric under a 180-degree rotation so both starts are fair."
+}
