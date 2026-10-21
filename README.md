@@ -71,7 +71,7 @@ Four rooms in a 2×2 grid with single inner walls (no hallway), symmetric under 
 
 - **Bedroom** (top-left) — Blue's dock is on the left wall. Bed with its headboard against the top wall, nightstand, plant. Blocked area ≈ 19.8.
 - **Kitchen** (bottom-right) — Orange's dock is on the right wall. Counter and fridge along the bottom wall, island in the center, pantry cabinet on the right wall, plant. Blocked area ≈ 19.9.
-- **Living room** (top-right) — TV stand on the top wall, couch in the center facing it, coffee table between, plant. Blocked area ≈ 10.9.
+- **Living room** (top-right) — TV stand on the top wall, couch in the center facing it, plant (the coffee table was removed: vacuums got stuck between it and the couch). Blocked area ≈ 8.9.
 - **Study** (bottom-left) — desk and bookshelf on the bottom wall, wardrobe on the left wall, plant. Blocked area ≈ 10.9.
 - 10 fixed power-up spots: the four doorways, one in each room, and one near each start room's inner corner.
 
