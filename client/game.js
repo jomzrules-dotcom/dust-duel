@@ -489,7 +489,6 @@ function showResult(view, ev) {
   hud.overButtons.classList.remove('show'); hud.confetti.innerHTML = ''; hud.plates.innerHTML = '';
   hud.revealLabel.textContent = ev.reason === 'left' ? 'THE OTHER PLAYER LEFT' : "TIME'S UP — COUNTING THE FLOOR…";
   hud.tugL.textContent = '?'; hud.tugR.textContent = '?'; hud.tug.classList.add('shake');
-  hud.tally.innerHTML = tallyLabel();
   // the camera pulls back to the whole house first, so both players see the damage before the bar
   if (ev.reason !== 'left') flashBanner("TIME'S UP!", 1600);
   const HOLD = ev.reason === 'left' ? 300 : (followAllowed() ? 2600 : 1200);
@@ -531,8 +530,8 @@ function showResult(view, ev) {
     const plates = [
       [`${m2} m²`, `${me >= 0 ? 'YOU' : PLAYER_NAMES[mine].toUpperCase()} STOLE`], [String(st.pickups), 'POWER-UPS'], [String(bumps), 'BUMPS'],
     ];
-    plates.forEach(([big, small, cls], i) => { const d = document.createElement('div'); d.className = 'plate'; d.style.animationDelay = `${0.25 + i * 0.12}s`; d.innerHTML = `<b class="${cls || ''}">${big}</b><small>${small}</small>`; hud.plates.appendChild(d); });
-    if (w !== 0) { wins[w - 1]++; try { sessionStorage.setItem('dd-wins', JSON.stringify(wins)); } catch {} hud.tally.innerHTML = tallyLabel(); startDonuts(w); }
+    // stats are counted but not shown (the boss wants the recap short): plates stay empty
+    if (w !== 0) { wins[w - 1]++; try { sessionStorage.setItem('dd-wins', JSON.stringify(wins)); } catch {} startDonuts(w); }
     if (w !== 0) confetti(w === 1 ? ['#3b82f6', '#93c5fd', '#1d4ed8', '#fff'] : ['#f97316', '#fdba74', '#c2410c', '#fff']);
     setTimeout(() => { if (run === revealRun) hud.overButtons.classList.add('show'); }, 900);
   }
