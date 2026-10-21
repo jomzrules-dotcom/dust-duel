@@ -462,7 +462,7 @@ function startDonuts(w) {
   const V = vis[w - 1];
   reveal.w = w - 1; reveal.r = donutRadius(V.x, V.z); reveal.a = V.h - Math.PI / 2; reveal.t = 0;
   reveal.cx = V.x - Math.cos(reveal.a) * reveal.r; reveal.cz = V.z - Math.sin(reveal.a) * reveal.r;
-  reveal.active = true; reveal.cam = true; cam.init = false;
+  reveal.active = true; reveal.cam = false;   // the camera stays on the whole house (following the donuts made people dizzy)
 }
 function stepReveal(dt) {   // called from update() while the match is over
   if (!reveal.active) return;
@@ -529,8 +529,7 @@ function showResult(view, ev) {
     // plates: both shares, then the stats of "you" (or the winner when nobody is "you")
     const mine = me >= 0 ? me : Math.max(0, w - 1), st = stats[mine], m2 = (st.stolen * C.CELL * C.CELL).toFixed(1);
     const plates = [
-      [`${Math.round(w === 2 ? b : a)}%`, 'OF THE HOUSE', w === 2 ? 'p2' : 'p1'], [`${Math.round(w === 2 ? a : b)}%`, 'OF THE HOUSE', w === 2 ? 'p1' : 'p2'],
-      [`${m2} m²`, `${me >= 0 ? 'YOU' : PLAYER_NAMES[mine].toUpperCase()} STOLE`], [String(st.dumps), 'DUMPS'], [String(st.pickups), 'POWER-UPS'],
+      [`${m2} m²`, `${me >= 0 ? 'YOU' : PLAYER_NAMES[mine].toUpperCase()} STOLE`], [String(st.pickups), 'POWER-UPS'], [String(bumps), 'BUMPS'],
     ];
     plates.forEach(([big, small, cls], i) => { const d = document.createElement('div'); d.className = 'plate'; d.style.animationDelay = `${0.25 + i * 0.12}s`; d.innerHTML = `<b class="${cls || ''}">${big}</b><small>${small}</small>`; hud.plates.appendChild(d); });
     if (w !== 0) { wins[w - 1]++; try { sessionStorage.setItem('dd-wins', JSON.stringify(wins)); } catch {} hud.tally.innerHTML = tallyLabel(); startDonuts(w); }
