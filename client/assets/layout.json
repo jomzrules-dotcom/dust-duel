@@ -219,15 +219,6 @@
       "blocks": true
     },
     {
-      "model": "coffee_table",
-      "x": 5.9,
-      "z": -6.68,
-      "rot": 0,
-      "w": 2.0,
-      "d": 1.0,
-      "blocks": true
-    },
-    {
       "model": "tv_stand",
       "x": 6.0,
       "z": -8.35,
