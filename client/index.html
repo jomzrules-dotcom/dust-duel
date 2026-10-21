@@ -45,7 +45,8 @@
   /* touch controls */
   #touch { position: fixed; inset: 0; display: none; pointer-events: none; }
   body.touch #touch { display: block; }
-  body.menu #touch, body.menu #hud { display: none; }
+  body.menu #touch, body.menu #hud, body.results #touch, body.results #hud, body.results #arrows { display: none; }
+  #results .row { justify-content: flex-start; }
   #stick { position: absolute; width: 150px; height: 150px; border-radius: 50%; background: rgba(28,25,23,.18); border: 2px solid rgba(255,255,255,.5); display: none; }
   #knob { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: rgba(251,247,240,.9); box-shadow: 0 4px 12px rgba(0,0,0,.3); left: 43px; top: 43px; }
   .tbtn { position: absolute; right: 24px; border-radius: 50%; border: 3px solid rgba(255,255,255,.7); font-weight: 900; color: #fff; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; box-shadow: 0 6px 18px rgba(0,0,0,.25); pointer-events: auto; }
@@ -137,22 +138,41 @@
   .card .small { font-size: 12px; color: #78716c; margin-top: 10px; font-weight: 700; }
   .card code { background: #e7e5e4; padding: 2px 6px; border-radius: 6px; }
   #code { display: inline-block; font-size: 44px; font-weight: 900; letter-spacing: .15em; margin: 8px 0; background: #fff; border: 4px solid var(--ink); border-radius: 10px; padding: 0 18px; box-shadow: 4px 4px 0 var(--ink); }
-  #over { position: relative; overflow: hidden; }
-  .eyebrow { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: #78716c; margin-bottom: 14px; }
-  #tug { position: relative; height: 34px; border-radius: 999px; background: var(--dirt); overflow: hidden; box-shadow: inset 0 0 0 3px rgba(255,255,255,.7), 0 6px 18px rgba(0,0,0,.18); }
-  #tug .t1, #tug .t2 { position: absolute; top: 0; bottom: 0; width: 0%; }
-  #tug .t1 { left: 0; width: 50%; background: linear-gradient(90deg, #2563eb, #60a5fa); }
-  #tug .t2 { right: 0; width: 50%; background: linear-gradient(270deg, #ea580c, #fb923c); }
-  #tug .mark { position: absolute; top: -4px; bottom: -4px; width: 4px; left: 50%; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,.4); border-radius: 2px; }
+  /* ---------- results screen ---------- */
+  #results { position: fixed; inset: 0; z-index: 9; pointer-events: none; display: none; --u: clamp(5px, 1vw, 12px); }
+  body.results #results { display: block; }
+  .rs-vignette { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(28,25,23,.8) 0%, rgba(28,25,23,.62) 40%, rgba(28,25,23,.05) 66%); }
+  .rs-ui { position: absolute; left: max(16px, env(safe-area-inset-left)); top: calc(var(--u) * 4 + env(safe-area-inset-top)); bottom: calc(var(--u) * 3 + env(safe-area-inset-bottom)); width: min(58vw, 760px); display: flex; flex-direction: column; justify-content: center; gap: calc(var(--u) * 1); }
+  .rs-ui > * { pointer-events: auto; flex-shrink: 0; }
+  .eyebrow { font-size: calc(var(--u) * 1.2); font-weight: 900; letter-spacing: .14em; color: #e7e5e4; text-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .sticker { align-self: flex-start; transform: rotate(-3deg) scale(0); background: var(--race); color: var(--ink); font-weight: 900; font-size: calc(var(--u) * 1.5); letter-spacing: .14em; padding: calc(var(--u) * .35) calc(var(--u) * 1.1); border-radius: 999px; border: calc(var(--u) * .25) solid var(--ink); box-shadow: calc(var(--u) * .3) calc(var(--u) * .3) 0 var(--ink); transition: transform .35s cubic-bezier(.2,1.6,.4,1); }
+  .sticker.show { transform: rotate(-3deg) scale(1); }
+  .win { font-family: var(--display); font-size: calc(var(--u) * 6.4); line-height: .9; color: #fff; -webkit-text-stroke: calc(var(--u) * .35) var(--ink); paint-order: stroke fill; text-shadow: calc(var(--u) * .5) calc(var(--u) * .5) 0 var(--ink), 0 calc(var(--u) * 1.2) calc(var(--u) * 2) rgba(0,0,0,.4); transform: rotate(-3deg) scale(0); letter-spacing: .02em; margin-left: calc(var(--u) * .6); transition: transform .4s cubic-bezier(.2,1.6,.4,1); min-height: calc(var(--u) * 6); }
+  .win.show { transform: rotate(-3deg) scale(1); }
+  .win.p1 { color: #79b0ff; } .win.p2 { color: #ffb062; }
+  .win small { display: block; font-size: calc(var(--u) * 2.1); color: #fff; -webkit-text-stroke: calc(var(--u) * .2) var(--ink); text-shadow: calc(var(--u) * .3) calc(var(--u) * .3) 0 var(--ink); letter-spacing: .08em; margin-top: calc(var(--u) * .6); }
+  #tug { position: relative; height: calc(var(--u) * 4.4); margin-top: calc(var(--u) * 3.2); border-radius: 999px; background: var(--dirt); border: calc(var(--u) * .3) solid var(--ink); box-shadow: calc(var(--u) * .35) calc(var(--u) * .35) 0 var(--ink); }
+  #tug .t1, #tug .t2 { position: absolute; top: 0; bottom: 0; }
+  #tug .t1 { left: 0; width: 50%; background: linear-gradient(90deg, #2563eb, #79b0ff); border-radius: 999px 0 0 999px; }
+  #tug .t2 { right: 0; width: 50%; background: linear-gradient(270deg, #ea580c, #ffb062); border-radius: 0 999px 999px 0; }
+  #tug .flag { position: absolute; top: calc(var(--u) * -1.2); bottom: calc(var(--u) * -1.2); left: 50%; width: calc(var(--u) * 1.2); transform: translateX(-50%); background: repeating-conic-gradient(#1c1917 0 25%, #fbf7f0 0 50%) 0 0 / calc(var(--u) * .6) calc(var(--u) * .6); border: calc(var(--u) * .2) solid var(--ink); border-radius: calc(var(--u) * .3); }
+  #tug .pct { position: absolute; top: calc(var(--u) * -2.9); font-family: var(--display); font-size: calc(var(--u) * 2.4); color: #fff; -webkit-text-stroke: calc(var(--u) * .18) var(--ink); paint-order: stroke fill; font-variant-numeric: tabular-nums; }
+  #tug .pct.l { left: calc(var(--u) * .6); color: #79b0ff; } #tug .pct.r { right: calc(var(--u) * .6); color: #ffb062; }
+  #tug .mini { position: absolute; top: 50%; width: calc(var(--u) * 3.6); height: calc(var(--u) * 3.6); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff 0 18%, #e8e8e8 19% 100%); border: calc(var(--u) * .22) solid var(--ink); transform: translate(-50%, -50%); left: 50%; }
+  #tug .mini::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; background: var(--c); }
+  #tug .mini.a { --c: var(--p1); margin-left: calc(var(--u) * -2.6); } #tug .mini.b { --c: var(--p2); margin-left: calc(var(--u) * 2.6); }
   #tug.shake { animation: tugshake .08s infinite alternate; }
   @keyframes tugshake { from { transform: translateX(-2px); } to { transform: translateX(2px); } }
-  #tugPct { display: flex; justify-content: space-between; font-weight: 900; font-size: 22px; margin: 8px 2px 4px; font-variant-numeric: tabular-nums; }
-  #tugPct .l { color: var(--p1); } #tugPct .r { color: var(--p2); }
-  #result { font-family: var(--display); font-size: 46px; letter-spacing: .02em; margin: 10px 0 2px; min-height: 54px; transform: scale(0); transition: transform .35s cubic-bezier(.2,1.6,.4,1); -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill; text-shadow: 3px 3px 0 var(--ink); }
-  #result.show { transform: scale(1); }
-  #resultline { color: #57534e; margin-bottom: 10px; font-size: 14px; min-height: 1.2em; font-weight: 700; }
-  #overButtons { opacity: 0; transition: opacity .4s; pointer-events: none; }
-  #overButtons.show { opacity: 1; pointer-events: auto; }
+  .plates { display: flex; gap: calc(var(--u) * .8); flex-wrap: wrap; min-height: calc(var(--u) * 5.6); }
+  .plate { background: var(--paper); border: calc(var(--u) * .25) solid var(--ink); border-radius: calc(var(--u) * .9); box-shadow: calc(var(--u) * .3) calc(var(--u) * .3) 0 var(--ink); padding: calc(var(--u) * .4) calc(var(--u) * .9); text-align: center; min-width: calc(var(--u) * 8.2); transform: scale(0); animation: platepop .4s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes platepop { to { transform: scale(1); } }
+  .plate b { display: block; font-family: var(--display); font-size: calc(var(--u) * 2.3); line-height: 1; letter-spacing: .02em; color: var(--ink); }
+  .plate b.p1 { color: var(--p1); } .plate b.p2 { color: var(--p2); }
+  .plate small { font-size: calc(var(--u) * 1.05); font-weight: 900; letter-spacing: .1em; color: #6b645c; }
+  .plate-sm { position: absolute; right: calc(var(--u) * 2 + env(safe-area-inset-right)); top: calc(var(--u) * 2.4 + env(safe-area-inset-top)); font-weight: 900; font-size: calc(var(--u) * 1.35); letter-spacing: .12em; background: var(--paper); border: calc(var(--u) * .25) solid var(--ink); border-radius: calc(var(--u) * .7); padding: calc(var(--u) * .3) var(--u); box-shadow: calc(var(--u) * .25) calc(var(--u) * .25) 0 var(--ink); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .plate-sm b.p1 { color: var(--p1); } .plate-sm b.p2 { color: var(--p2); }
+  #overButtons { opacity: 0; transition: opacity .4s; pointer-events: none !important; }
+  #overButtons.show { opacity: 1; pointer-events: auto !important; }
   #confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
   #confetti i { position: absolute; top: -12px; width: 10px; height: 14px; opacity: .95; animation: fall linear forwards; }
   @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: .7; } }
@@ -250,6 +270,22 @@
   <div class="corner"><button class="pill" id="btnHow">? HOW TO PLAY</button></div>
 </div>
 
+<!-- results: plays out in the house (winner donuts behind), numbers as racing plates on the left -->
+<div id="results">
+  <div class="rs-vignette"></div>
+  <div class="checker top"></div><div class="checker bottom"></div>
+  <div id="confetti"></div>
+  <div id="tally" class="plate-sm"></div>
+  <div class="rs-ui">
+    <div class="eyebrow" id="revealLabel">TIME'S UP — COUNTING THE FLOOR…</div>
+    <div class="sticker" id="sticker"></div>
+    <div class="win" id="result"><span id="resultTop"></span><small id="resultline"></small></div>
+    <div id="tug"><div class="t1"></div><div class="t2"></div><span class="pct l" id="tugL">?</span><span class="pct r" id="tugR">?</span><div class="flag"></div><div class="mini a"></div><div class="mini b"></div></div>
+    <div class="plates" id="plates"></div>
+    <div class="row" id="overButtons"><button class="mb go" id="btnAgain"><span class="no">GO</span><span>REMATCH</span></button><button class="mb b3 sm" id="btnMenu"><span>MENU</span></button></div>
+  </div>
+</div>
+
 <div id="overlay" class="hidden">
   <div class="card" id="how" style="display:none">
     <h1><span class="a">How</span> <span class="b">to play</span></h1>
@@ -284,15 +320,6 @@
     <button id="btnCancel" class="alt">Cancel</button>
   </div>
 
-  <div class="card" id="over" style="display:none">
-    <div id="confetti"></div>
-    <div class="eyebrow" id="revealLabel">TIME'S UP — COUNTING THE FLOOR…</div>
-    <div id="tug"><div class="t1"></div><div class="t2"></div><div class="mark"></div></div>
-    <div id="tugPct"><span class="l">?</span><span class="r">?</span></div>
-    <div id="result"></div>
-    <div id="resultline"></div>
-    <div class="row" id="overButtons"><button id="btnAgain">Play again</button><button id="btnMenu" class="alt">Menu</button></div>
-  </div>
 </div>
 
 <script type="importmap">

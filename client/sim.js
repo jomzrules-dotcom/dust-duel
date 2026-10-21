@@ -97,18 +97,18 @@ export function createSim(layout, opts = {}) {
   // Clean mode: dirty + opponent cells within r become `owner`. Returns how many were dirty (fills the bin).
   function cleanAt(x, z, r, owner) {
     const [cx0, cz0] = cellOf(x - r, z - r), [cx1, cz1] = cellOf(x + r, z + r);
-    let dirty = 0, changed = false;
+    let dirty = 0, stolen = 0, changed = false;
     for (let cz = Math.max(0, cz0); cz <= Math.min(GH - 1, cz1); cz++) {
       for (let cx = Math.max(0, cx0); cx <= Math.min(GW - 1, cx1); cx++) {
         const [wx, wz] = cellCenter(cx, cz);
         if ((wx - x) ** 2 + (wz - z) ** 2 > r * r) continue;
         const i = cz * GW + cx, v = grid[i];
         if (v === BLOCKED || v === owner) continue;
-        if (v === 0) dirty++; else state.counts[v]--;
+        if (v === 0) dirty++; else { state.counts[v]--; stolen++; }
         grid[i] = owner; state.counts[owner]++; changed = true;
       }
     }
-    if (changed) emit({ e: 'clean', x: +x.toFixed(2), z: +z.toFixed(2), r, o: owner });
+    if (changed) emit({ e: 'clean', x: +x.toFixed(2), z: +z.toFixed(2), r, o: owner, s: stolen });   // s: cells taken from the other player
     return dirty;
   }
   // Dirt lands only on the victim's clean floor. Returns cells converted.

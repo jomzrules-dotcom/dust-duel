@@ -16,6 +16,7 @@ const ITEM_ICON = { shield: '🛡', cables: '🔌', spill: '💧', turbo: '⚡',
 const PU_CSS = Object.fromEntries(Object.entries(PU_COLOR).map(([k, v]) => [k, '#' + v.toString(16).padStart(6, '0')]));
 
 const layout = await (await fetch('./assets/layout.json')).json();
+{ const q = new URLSearchParams(location.search); if (q.has('t')) C.MATCH_TIME = Math.max(1, +q.get('t')); }   // ?t=10 → short matches for testing
 const sim = createSim(layout);
 const { MAP_W, MAP_H, GW, GH } = sim;
 const CELL = C.CELL;
@@ -360,11 +361,11 @@ function syncEntities(view, time) {
 const $ = id => document.getElementById(id);
 const hud = {
   timer: $('timer'), panels: [$('panel1'), $('panel2')],
-  tug: $('tug'), t1: document.querySelector('#tug .t1'), t2: document.querySelector('#tug .t2'), tugL: document.querySelector('#tugPct .l'), tugR: document.querySelector('#tugPct .r'),
+  tug: $('tug'), t1: document.querySelector('#tug .t1'), t2: document.querySelector('#tug .t2'), tugL: $('tugL'), tugR: $('tugR'),
   revealLabel: $('revealLabel'), overButtons: $('overButtons'), confetti: $('confetti'),
   modes: [$('mode1'), $('mode2')], bins: [$('bin1'), $('bin2')], binlabels: [$('binlabel1'), $('binlabel2')], items: [$('item1'), $('item2')],
   tags: [$('tag1'), $('tag2')], keys: [$('keys1'), $('keys2')],
-  overlay: $('overlay'), waiting: $('waiting'), over: $('over'), result: $('result'), resultline: $('resultline'),
+  overlay: $('overlay'), waiting: $('waiting'), result: $('result'), resultTop: $('resultTop'), resultline: $('resultline'), sticker: $('sticker'), plates: $('plates'), tally: $('tally'),
   countdown: $('countdown'), cdNum: $('cdNum'), lights: [...document.querySelectorAll('#lights i')], banner: $('banner'), status: $('status'), code: $('code'), waitHint: $('waitHint'),
   btnMode: $('btnMode'), btnItem: $('btnItem'),
 };
@@ -374,7 +375,7 @@ function flashBanner(text, ms = 1200) {
   clearTimeout(bannerTimer); bannerTimer = setTimeout(() => hud.banner.style.opacity = 0, ms);
 }
 function showCard(name) {
-  for (const c of ['how', 'pit', 'waiting', 'over']) $(c).style.display = c === name ? 'block' : 'none';
+  for (const c of ['how', 'pit', 'waiting']) $(c).style.display = c === name ? 'block' : 'none';
   hud.overlay.classList.toggle('hidden', !name);
 }
 // DOM writes only when the text actually changes (writing the same string every frame still costs layout on phones)
@@ -417,16 +418,21 @@ function updateHUD(view) {
 }
 
 // ---------------------------------------------------------------- events → effects
+// per-match stats for the results plates, counted from the events (no rule changes): stolen cells, dumps, power-ups
+const stats = [{ stolen: 0, dumps: 0, pickups: 0 }, { stolen: 0, dumps: 0, pickups: 0 }];
+let bumps = 0;
+const wins = [0, 0];   // today's tally (this page session)
+try { const w = JSON.parse(sessionStorage.getItem('dd-wins') || 'null'); if (Array.isArray(w)) { wins[0] = w[0] | 0; wins[1] = w[1] | 0; } } catch {}
 function handleEvent(ev, view) {
   const t = view.time;
   switch (ev.e) {
-    case 'reset': fillDirt(); for (const [k, m] of entityMeshes) { scene.remove(m); } entityMeshes.clear(); break;
-    case 'clean': paintClean(ev.x, ev.z, ev.r, ev.o); break;
+    case 'reset': fillDirt(); for (const [k, m] of entityMeshes) { scene.remove(m); } entityMeshes.clear(); for (const st of stats) { st.stolen = st.dumps = st.pickups = 0; } bumps = 0; reveal.active = false; document.body.classList.remove('results'); break;
+    case 'clean': paintClean(ev.x, ev.z, ev.r, ev.o); if (ev.s) stats[ev.o - 1].stolen += ev.s; break;
     case 'dirt': paintDirt(ev); break;
-    case 'toggle': burst(ev.x, ev.z, ev.mode === 'clean' ? 0xbbf7d0 : 0x92400e, 8, 1.2, 1.5, 0.7); break;
-    case 'pickup': burst(ev.x, ev.z, PU_COLOR[ev.type], 10, 1.5, 2); break;
+    case 'toggle': burst(ev.x, ev.z, ev.mode === 'clean' ? 0xbbf7d0 : 0x92400e, 8, 1.2, 1.5, 0.7); if (ev.mode === 'dump') stats[ev.p].dumps++; break;
+    case 'pickup': burst(ev.x, ev.z, PU_COLOR[ev.type], 10, 1.5, 2); stats[ev.p].pickups++; break;
     case 'use': if (ev.p === me || mode === 'local' || !ev.auto) flashBanner(ev.auto && ev.p === me ? `${POWERUPS[ev.type].name.toUpperCase()}!` : `${PLAYER_NAMES[ev.p]}: ${POWERUPS[ev.type].name}!`, 800); break;
-    case 'bump': burst(ev.x, ev.z, 0xd6d3d1, 16, 2.2, 2.6, 0.8); flashBanner('BUMP!', 500); bumpTopper(vis[0].topper); bumpTopper(vis[1].topper); break;
+    case 'bump': burst(ev.x, ev.z, 0xd6d3d1, 16, 2.2, 2.6, 0.8); flashBanner('BUMP!', 500); bumpTopper(vis[0].topper); bumpTopper(vis[1].topper); bumps++; break;
     case 'stuck': burst(ev.x, ev.z, 0xfde047, 14, 1.5, 2.5, 0.6); flashBanner(`${PLAYER_NAMES[ev.p]} is tangled in cables!`, 900); break;
     case 'blocked': burst(ev.x, ev.z, 0x38bdf8, 12, 2, 2); break;
     case 'spill': burst(ev.x, ev.z, ev.shielded ? 0x38bdf8 : 0x78350f, 22, 2.5, 2.5, 0.9); break;
@@ -437,18 +443,59 @@ function handleEvent(ev, view) {
   }
 }
 let revealRun = 0;
+// Reveal choreography (cosmetic, runs on each client from the 'over' event, so online both see the same):
+// pull back → the bar shoves for a few seconds → banner slams in, camera dives to the winner doing donuts.
+const reveal = { active: false, cam: false, w: 0, cx: 0, cz: 0, r: 0, a: 0, t: 0 };
+function donutRadius(x, z) {   // biggest circle around (x, z) the vacuum can drive without hitting furniture or walls
+  for (const r of [1.4, 1.0, 0.7]) {
+    let ok = true;
+    for (let i = 0; i < 20 && ok; i++) {
+      const a = i / 20 * Math.PI * 2, p = { x: x + Math.cos(a) * r, z: z + Math.sin(a) * r };
+      const q = { x: p.x, z: p.z }; sim.collide(q);
+      if (Math.hypot(q.x - p.x, q.z - p.z) > 1e-3) ok = false;
+    }
+    if (ok) return r;
+  }
+  return 0;   // no room: spin on the spot
+}
+function startDonuts(w) {
+  const V = vis[w - 1];
+  reveal.w = w - 1; reveal.r = donutRadius(V.x, V.z); reveal.a = V.h - Math.PI / 2; reveal.t = 0;
+  reveal.cx = V.x - Math.cos(reveal.a) * reveal.r; reveal.cz = V.z - Math.sin(reveal.a) * reveal.r;
+  reveal.active = true; reveal.cam = true; cam.init = false;
+}
+function stepReveal(dt) {   // called from update() while the match is over
+  if (!reveal.active) return;
+  reveal.t += dt;
+  const W = vis[reveal.w], L = vis[1 - reveal.w];
+  const speed = reveal.r > 0 ? 4.2 / Math.max(reveal.r, 0.5) : 5;    // rad/s
+  reveal.a += speed * dt;
+  W.x = reveal.cx + Math.cos(reveal.a) * reveal.r; W.z = reveal.cz + Math.sin(reveal.a) * reveal.r; W.h = reveal.a + Math.PI / 2;
+  W.spin += 18 * dt;
+  if (reveal.r > 0) paintClean(W.x, W.z, C.BRUSH_R * 0.8, reveal.w + 1);
+  if (reveal.t < 6 && Math.random() < 0.5) burst(W.x - Math.cos(W.h) * 0.5, W.z - Math.sin(W.h) * 0.5, 0xffffff, 1, 0.8, 1.6, 0.6);
+  if (L.topper) { L.topper.rotation.z = -0.35 + Math.sin(reveal.t * 1.6) * 0.08; L.topper.rotation.x = 0.15; }   // the loser's hat droops
+}
+function endReveal() { if (reveal.active) { const L = vis[1 - reveal.w]; if (L.topper) { L.topper.rotation.z = 0; L.topper.rotation.x = 0; } } reveal.active = false; reveal.cam = false; }
+function tallyLabel() {
+  const names = mode === 'solo' ? ['YOU', 'COMPUTER'] : mode === 'online' ? (me === 0 ? ['YOU', 'FRIEND'] : ['FRIEND', 'YOU']) : ['BLUE', 'ORANGE'];
+  return `TODAY · <b class="p1">${names[0]} ${wins[0]}</b> – <b class="p2">${wins[1]} ${names[1]}</b>`;
+}
 function showResult(view, ev) {
   const tot = view.totalCells || 1, a = view.counts[1] / tot * 100, b = view.counts[2] / tot * 100, w = ev.winner;
   const run = ++revealRun;
-  hud.result.textContent = ''; hud.result.classList.remove('show'); hud.resultline.textContent = ''; hud.overButtons.classList.remove('show'); hud.confetti.innerHTML = '';
+  endReveal();
+  hud.resultTop.textContent = ''; hud.resultline.textContent = ''; hud.result.className = 'win'; hud.sticker.className = 'sticker';
+  hud.overButtons.classList.remove('show'); hud.confetti.innerHTML = ''; hud.plates.innerHTML = '';
   hud.revealLabel.textContent = ev.reason === 'left' ? 'THE OTHER PLAYER LEFT' : "TIME'S UP — COUNTING THE FLOOR…";
   hud.tugL.textContent = '?'; hud.tugR.textContent = '?'; hud.tug.classList.add('shake');
+  hud.tally.innerHTML = tallyLabel();
   // the camera pulls back to the whole house first, so both players see the damage before the bar
   if (ev.reason !== 'left') flashBanner("TIME'S UP!", 1600);
   const HOLD = ev.reason === 'left' ? 300 : (followAllowed() ? 2600 : 1200);
   // the bar is split between the two players' cleaned floor only (no dirty gap): blue share = a / (a + b)
   const share = a + b > 0 ? a / (a + b) * 100 : 50;
-  const setBar = l => { hud.t1.style.width = `${l}%`; hud.t2.style.width = `${100 - l}%`; hud.tug.querySelector('.mark').style.left = `calc(${l}% - 2px)`; };
+  const setBar = l => { hud.t1.style.width = `${l}%`; hud.t2.style.width = `${100 - l}%`; for (const el of hud.tug.querySelectorAll('.flag, .mini')) el.style.left = `${l}%`; };
   const label = l => { hud.tugL.textContent = `${Math.round(l)}%`; hud.tugR.textContent = `${100 - Math.round(l)}%`; };
   setBar(50);
   // the bar wrestles back and forth for a few seconds, then snaps to the truth
@@ -457,7 +504,7 @@ function showResult(view, ev) {
   let side = Math.random() < 0.5 ? -1 : 1;
   while (tt < DUR - 0.4) { side = -side; lurches.push({ t: tt, l: 50 + side * (8 + Math.random() * 22) }); tt += 0.35 + Math.random() * 0.3; }   // alternate sides
   const ease = x => 1 - Math.pow(1 - x, 3);
-  setTimeout(() => { if (run !== revealRun) return; showCard('over'); start = performance.now(); requestAnimationFrame(frame); }, HOLD);
+  setTimeout(() => { if (run !== revealRun) return; document.body.classList.add('results'); start = performance.now(); requestAnimationFrame(frame); }, HOLD);
   function frame() {
     if (run !== revealRun) return;
     const el = (performance.now() - start) / 1000;
@@ -471,10 +518,22 @@ function showResult(view, ev) {
     }
     setBar(share); label(share); hud.tug.classList.remove('shake');
     hud.revealLabel.textContent = 'FINAL';
-    hud.result.textContent = w === 0 ? "IT'S A TIE!" : `${PLAYER_NAMES[w - 1].toUpperCase()} WINS!`;
-    hud.result.style.color = w === 0 ? '#1c1917' : (w === 1 ? 'var(--p1)' : 'var(--p2)');
-    hud.result.classList.add('show');
-    hud.resultline.textContent = `Blue cleaned ${Math.round(a)}% of the house · Orange ${Math.round(b)}% · ${Math.max(0, Math.round(100 - a - b))}% still dirty` + (mode !== 'local' && me >= 0 ? (w === 0 ? '' : w === me + 1 ? ' — nice driving!' : ' — rematch?') : '');
+    // verdict sticker by margin
+    const ws = w === 1 ? share : 100 - share;
+    hud.sticker.textContent = w === 0 ? 'SPLIT DECISION' : ws > 80 ? 'LANDSLIDE' : ws > 65 ? 'CLEAN SWEEP' : ws < 55 ? 'PHOTO FINISH' : 'CHECKERED FLAG';
+    hud.sticker.classList.add('show');
+    const who = i => mode === 'solo' ? (i === 0 ? 'YOU' : 'THE COMPUTER') : mode === 'online' ? (i === me ? 'YOU' : 'YOUR FRIEND') : PLAYER_NAMES[i].toUpperCase();
+    hud.resultTop.textContent = w === 0 ? "IT'S A TIE!" : `${PLAYER_NAMES[w - 1].toUpperCase()} WINS!`;
+    hud.resultline.textContent = w === 0 ? 'NOBODY TAKES THE HOUSE' : `${who(w - 1)} TAKE${who(w - 1) === 'YOU' ? '' : 'S'} THE HOUSE`;
+    hud.result.classList.add('show', w === 1 ? 'p1' : w === 2 ? 'p2' : 'tie');
+    // plates: both shares, then the stats of "you" (or the winner when nobody is "you")
+    const mine = me >= 0 ? me : Math.max(0, w - 1), st = stats[mine], m2 = (st.stolen * C.CELL * C.CELL).toFixed(1);
+    const plates = [
+      [`${Math.round(w === 2 ? b : a)}%`, 'OF THE HOUSE', w === 2 ? 'p2' : 'p1'], [`${Math.round(w === 2 ? a : b)}%`, 'OF THE HOUSE', w === 2 ? 'p1' : 'p2'],
+      [`${m2} m²`, `${me >= 0 ? 'YOU' : PLAYER_NAMES[mine].toUpperCase()} STOLE`], [String(st.dumps), 'DUMPS'], [String(st.pickups), 'POWER-UPS'],
+    ];
+    plates.forEach(([big, small, cls], i) => { const d = document.createElement('div'); d.className = 'plate'; d.style.animationDelay = `${0.25 + i * 0.12}s`; d.innerHTML = `<b class="${cls || ''}">${big}</b><small>${small}</small>`; hud.plates.appendChild(d); });
+    if (w !== 0) { wins[w - 1]++; try { sessionStorage.setItem('dd-wins', JSON.stringify(wins)); } catch {} hud.tally.innerHTML = tallyLabel(); startDonuts(w); }
     if (w !== 0) confetti(w === 1 ? ['#3b82f6', '#93c5fd', '#1d4ed8', '#fff'] : ['#f97316', '#fdba74', '#c2410c', '#fff']);
     setTimeout(() => { if (run === revealRun) hud.overButtons.classList.add('show'); }, 900);
   }
@@ -513,7 +572,7 @@ window.addEventListener('keydown', e => {
     if (e.code === k.mode) pressAction(slot, 'toggle');
     if (e.code === k.use) pressAction(slot, 'use');
   });
-  if (e.code === 'KeyR' && hud.over.style.display === 'block' && hud.overButtons.classList.contains('show')) playAgain();
+  if (e.code === 'KeyR' && document.body.classList.contains('results') && hud.overButtons.classList.contains('show')) playAgain();
 });
 window.addEventListener('keyup', e => down.delete(e.code));
 window.addEventListener('blur', () => down.clear());
@@ -611,7 +670,7 @@ function setTags() {
   document.body.classList.toggle('hasme', me >= 0);
 }
 function startLocal(kind) {
-  leaveMenuScene(); if (kind !== 'try') laps++;
+  leaveMenuScene(); endReveal(); document.body.classList.remove('results'); revealRun++; if (kind !== 'try') laps++;
   cam.init = false; cam.blend = 0;
   net.close(); mode = kind; me = kind === 'local' ? -1 : 0;
   bot = kind === 'solo' ? createBot(sim, 1) : null;
@@ -621,10 +680,10 @@ function startLocal(kind) {
   setTags(); showCard(null); hud.status.textContent = '';
   document.body.classList.toggle('trymode', kind === 'try');
 }
-function startOnline(msg) { showCard(null); laps++; cam.init = false; cam.blend = 0; mode = 'online'; me = -1; bot = null; pred.init = false; view = emptyView(); fillDirt(); net.connect(msg); setTags(); }   // the attract scene keeps running until the match starts
+function startOnline(msg) { showCard(null); endReveal(); document.body.classList.remove('results'); revealRun++; laps++; cam.init = false; cam.blend = 0; mode = 'online'; me = -1; bot = null; pred.init = false; view = emptyView(); fillDirt(); net.connect(msg); setTags(); }   // the attract scene keeps running until the match starts
 function emptyView() { return { phase: 'idle', time: 0, timeLeft: C.MATCH_TIME, countdown: 0, counts: [0, 0, 0], totalCells: 1, vacs: [0, 1].map(i => ({ x: layout.docks[i].x, z: layout.docks[i].z, h: 0, mode: 'clean', bin: 0, item: null, stuckUntil: 0, turboUntil: 0, wideUntil: 0, shieldUntil: 0 })), pickups: [], traps: [], spills: [] }; }
-function goMenu() { document.body.classList.remove('trymode'); net.close(); mode = 'menu'; me = -1; bot = null; view = emptyView(); fillDirt(); syncEntities(view, 0); trails.clear(); setTopper(0, myTopper); setTopper(1, 'none'); renderTopperBar(); showCard(null); hud.status.textContent = ''; enterMenuScene(); }
-function playAgain() { if (mode === 'online') { net.again(); showCard(null); } else startLocal(mode); }
+function goMenu() { endReveal(); revealRun++; document.body.classList.remove('trymode', 'results'); net.close(); mode = 'menu'; me = -1; bot = null; view = emptyView(); fillDirt(); syncEntities(view, 0); trails.clear(); setTopper(0, myTopper); setTopper(1, 'none'); renderTopperBar(); showCard(null); hud.status.textContent = ''; enterMenuScene(); }
+function playAgain() { if (mode === 'online') { net.again(); endReveal(); document.body.classList.remove('results'); revealRun++; showCard(null); } else startLocal(mode); }
 function drainEvents(list) { for (const ev of list) handleEvent(ev, view); list.length = 0; }
 
 $('btnSolo').onclick = () => transition(() => startLocal('solo'));
@@ -714,6 +773,7 @@ function update(dt) {
   } else {
     for (const [i, v] of view.vacs.entries()) { vis[i].x = v.x; vis[i].z = v.z; vis[i].h = THREE.MathUtils.degToRad(layout.docks[i].rot); }
   }
+  if (view.phase === 'over') stepReveal(dt);
   // visuals
   const t = view.time;
   view.vacs.forEach((v, i) => {
@@ -729,7 +789,7 @@ function update(dt) {
     for (const b of V.brushes) b.rotation.z = V.spin * (b.name === 'Brush_L' ? 1 : -1);
     V.ring.material.color.setHex(v.mode === 'clean' ? 0x22c55e : 0x92400e);
     V.shield.visible = v.shieldUntil > t;
-    V.gauge.position.set(V.x, 0.9, V.z + 0.3);
+    V.gauge.position.set(V.x, 0.9, V.z + 0.3); V.gauge.visible = !reveal.active && !menuOn;
     V.gfill.scale.x = Math.max(0.001, v.bin / C.BIN_CAP); V.gfill.position.x = -(1 - V.gfill.scale.x) / 2;
     V.gfill.material.color.setHex(v.bin >= C.BIN_CAP ? 0xdc2626 : 0x92400e);
     if (view.phase === 'playing' && v.mode === 'dump' && v.bin > 0 && (v.stuckUntil <= t) && Math.random() < 0.25) burst(V.x - Math.cos(V.h) * 0.55, V.z - Math.sin(V.h) * 0.55, 0x8b7355, 1, 1.2, 1.4, 0.6);
@@ -759,11 +819,12 @@ function followAllowed() { return me >= 0 && mode !== 'local' && mode !== 'menu'
 const _p = new THREE.Vector3(), _q = new THREE.Vector3(), _l = new THREE.Vector3(), _m = new THREE.Vector3();
 function updateCamera(dt) {
   if (menuOn) { menu.placeCamera(); return; }
-  const follow = followAllowed() && (view.phase === 'playing' || view.phase === 'paused');
+  const follow = (followAllowed() && (view.phase === 'playing' || view.phase === 'paused')) || reveal.cam;
   const target = follow ? 1 : 0;
   cam.blend += (target - cam.blend) * (1 - Math.exp(-dt * (follow ? 3.2 : 2.6)));   // ~1 s swoop in / pull back
-  if (me >= 0) {
-    const V = vis[me];
+  const camIdx = reveal.cam ? reveal.w : me;
+  if (camIdx >= 0) {
+    const V = vis[camIdx];
     if (!cam.init) { cam.tx = V.x; cam.tz = V.z; cam.lx = V.x; cam.lz = V.z; cam.init = true; }
     // look ~1.5 m ahead of where the vacuum is going (from its actual motion)
     const k = 1 - Math.exp(-dt * 6);
