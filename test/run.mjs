@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { createSim } from '../client/sim.js';
+import { createSim, C } from '../client/sim.js';
 import { createBot } from '../client/bot.js';
 
 const layout = JSON.parse(readFileSync(new URL('../client/assets/layout.json', import.meta.url), 'utf8'));
@@ -47,11 +47,24 @@ await A.waitFor('start'); await B.waitFor('start');
 assert(true, 'both get start');
 await new Promise(r => setTimeout(r, 4200));                              // countdown
 assert(A.states.at(-1).phase === 'playing', 'match is playing after the countdown');
-A.send({ t: 'm', ix: 1, iz: 0 }); B.send({ t: 'm', ix: -1, iz: 0 });
+// each player drives out of its dock in the most open of 8 directions (works for any map)
+const probe = createSim(layout); probe.reset();
+const openDir = i => {
+  let best = null;
+  for (let k = 0; k < 8; k++) {
+    const a = k * Math.PI / 4, start = probe.state.vacs[i], p = { x: start.x, z: start.z };
+    for (let s = 0; s < 120; s++) { p.x += Math.cos(a) * C.SPEED / 60; p.z += Math.sin(a) * C.SPEED / 60; probe.collide(p); }
+    const d = Math.hypot(p.x - start.x, p.z - start.z);
+    if (!best || d > best.d) best = { ix: +Math.cos(a).toFixed(3), iz: +Math.sin(a).toFixed(3), d };
+  }
+  return best;
+};
+const dirA = openDir(0), dirB = openDir(1), start0 = A.states.at(-1).vacs.map(v => ({ x: v.x, z: v.z }));
+A.send({ t: 'm', ix: dirA.ix, iz: dirA.iz }); B.send({ t: 'm', ix: dirB.ix, iz: dirB.iz });
 await new Promise(r => setTimeout(r, 2000));
-const sA = A.states.at(-1);
-assert(sA.vacs[0].x > layout.docks[0].x + 3, `host vacuum moved right (x=${sA.vacs[0].x})`);
-assert(sA.vacs[1].x < layout.docks[1].x - 3, `guest vacuum moved left (x=${sA.vacs[1].x})`);
+const sA = A.states.at(-1), moved = i => Math.hypot(sA.vacs[i].x - start0[i].x, sA.vacs[i].z - start0[i].z);
+assert(moved(0) > 3, `host vacuum drove out of its dock (${moved(0).toFixed(1)} m)`);
+assert(moved(1) > 3, `guest vacuum drove out of its dock (${moved(1).toFixed(1)} m)`);
 assert(sA.counts[1] > 50 && sA.counts[2] > 50, 'both cleaned floor');
 assert(A.events.some(e => e.e === 'clean') && A.events.some(e => e.e === 'go'), 'events are relayed');
 A.send({ t: 'a', k: 'toggle' }); await new Promise(r => setTimeout(r, 300));

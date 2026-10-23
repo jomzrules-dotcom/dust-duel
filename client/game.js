@@ -2,7 +2,7 @@
 // Game rules live in sim.js (shared with the server). This file only draws what the sim (or the server) says.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { createSim, makeInput, C, POWERUPS } from './sim.js';
+import { createSim, makeInput, C, POWERUPS, rectOf } from './sim.js';
 import { createBot } from './bot.js';
 import { TOPPERS, makeTopper, animateTopper, bumpTopper, createTrails } from './toppers.js';
 import { createMenu } from './menu.js';
@@ -34,10 +34,19 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = COARSE ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xe8e1d6);
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-scene.add(new THREE.HemisphereLight(0xffffff, 0xb8a98f, 0.9));
-const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
+scene.background = new THREE.Color(0x24262c);
+const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);   // the main menu's camera (menu.js moves it)
+// The house is a painting (assets/house.jpg). houseCam is fitted to it once (docs/maps/fit-camera.mjs) and never moves:
+// follow and overview are a 2D pan/zoom of its view (setViewOffset), so 3D things stay glued to the painted floor.
+const PAINT = layout.painting, PCAM = PAINT.camera;
+const houseCam = new THREE.PerspectiveCamera(PCAM.vfov, PAINT.width / PAINT.height, 100, 260);
+houseCam.position.set(...PCAM.pos); houseCam.lookAt(PCAM.pos[0], 0, PCAM.targetZ); houseCam.updateMatrixWorld();
+const fullCam = houseCam.clone(); fullCam.updateProjectionMatrix();   // same view with no pan/zoom: world → painting pixels
+const _pp = new THREE.Vector3();
+function toPaint(x, y, z) { _pp.set(x, y, z).project(fullCam); return [(_pp.x + 1) / 2 * PAINT.width, (1 - _pp.y) / 2 * PAINT.height]; }
+// warm light, like the painting's evening lamps (only the 3D things are lit: vacuums, docks, power-ups)
+scene.add(new THREE.HemisphereLight(0xfff0dc, 0x8a7560, 0.95));
+const sun = new THREE.DirectionalLight(0xffe2b8, 1.5);
 sun.position.set(-10, 24, 8); sun.castShadow = true; sun.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048);
 Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 12, bottom: -12, near: 1, far: 60 });
 scene.add(sun);
@@ -51,85 +60,95 @@ floorTex.colorSpace = THREE.SRGBColorSpace; floorTex.anisotropy = 4;
 floorTex.generateMipmaps = false; floorTex.minFilter = THREE.LinearFilter;   // the floor is repainted every frame: no mipmap rebuild per upload
 let floorDirty = false;                                                     // uploads are batched: at most one every other frame (see frame())
 const touchFloor = () => { floorDirty = true; };
-// Dirty floor: blotchy grey-brown grime with crumbs and dust fluff. Clean floor: a bright, slightly glossy player tint.
-const DIRT_BASE = ['#7d7466', '#857b6c', '#746a5c', '#8c8273'], CRUMBS = ['#4e463c', '#b9ae9a', '#5c5247', '#a39786', '#3f382f'];
-const hash = (a, b, c = 0) => { let h = (a * 374761393 + b * 668265263 + c * 1274126177) | 0; h = (h ^ (h >>> 13)) * 1274126177; return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-function dirtCell(cx, cz) {
-  const x = cx * PX, y = cz * PX;
-  const blot = hash(cx >> 2, cz >> 2, 7);                       // 1-unit blotches of darker / lighter grime
-  pctx.fillStyle = DIRT_BASE[Math.floor(blot * DIRT_BASE.length)]; pctx.fillRect(x, y, PX, PX);
-  if (blot < 0.3) { pctx.fillStyle = 'rgba(60,50,40,.18)'; pctx.fillRect(x, y, PX, PX); }
-  const n = 2 + Math.floor(hash(cx, cz, 1) * 4);
-  for (let i = 0; i < n; i++) {
-    const r1 = hash(cx, cz, 10 + i), r2 = hash(cx, cz, 20 + i);
-    pctx.fillStyle = CRUMBS[Math.floor(hash(cx, cz, 30 + i) * CRUMBS.length)];
-    const size = r2 < 0.2 ? 2.5 : 1.3;
-    pctx.fillRect(x + r1 * (PX - size), y + r2 * (PX - size), size, size);
-  }
-  if (hash(cx, cz, 99) < 0.06) {                                 // a hair / fluff streak
-    pctx.strokeStyle = 'rgba(70,60,50,.7)'; pctx.lineWidth = 0.8; pctx.beginPath();
-    const a = hash(cx, cz, 98) * Math.PI; pctx.moveTo(x + 1, y + PX / 2); pctx.quadraticCurveTo(x + PX / 2, y + PX / 2 + Math.sin(a) * 3, x + PX - 1, y + PX / 2 - Math.cos(a) * 2); pctx.stroke();
-  }
-}
-function fillDirt() { for (let cz = 0; cz < GH; cz++) for (let cx = 0; cx < GW; cx++) dirtCell(cx, cz); touchFloor(); }
+// The floor layer lies over the painted floor and shows only the trails (boss: no dirt or grime). Cleaned floor is the
+// owner's tint at 55% (boss pick "B"); everything else is transparent, so the painting shows. When the rules turn
+// floor back to dirty (dump, spill), the trail is simply erased.
+const TINT = PLAYER_CSS.map(c => `rgba(${parseInt(c.slice(1, 3), 16)},${parseInt(c.slice(3, 5), 16)},${parseInt(c.slice(5, 7), 16)},.55)`);
+const clearCell = (cx, cz) => pctx.clearRect(cx * PX, cz * PX, PX, PX);
+function clearFloor() { pctx.clearRect(0, 0, paint.width, paint.height); touchFloor(); }
 function paintClean(x, z, r, owner) {
-  pctx.fillStyle = PLAYER_CSS[owner - 1];
-  pctx.beginPath(); pctx.arc((x + MAP_W / 2) / CELL * PX, (z + MAP_H / 2) / CELL * PX, r / CELL * PX, 0, Math.PI * 2); pctx.fill();
+  pctx.beginPath(); pctx.arc((x + MAP_W / 2) / CELL * PX, (z + MAP_H / 2) / CELL * PX, r / CELL * PX, 0, Math.PI * 2);
+  pctx.globalCompositeOperation = 'destination-out'; pctx.fill();   // wipe the other tint first: the tint is see-through
+  pctx.globalCompositeOperation = 'source-over'; pctx.fillStyle = TINT[owner - 1]; pctx.fill();
   touchFloor();
 }
-function paintDirt(ev) {
-  for (const i of ev.cells) dirtCell(i % GW, Math.floor(i / GW));
-  // a completed dump stroke is drawn as a round patch too, so the trail has the same smooth edge as the clean one
+function eraseTrail(ev) {
+  for (const i of ev.cells) clearCell(i % GW, Math.floor(i / GW));
+  // a completed dump stroke is erased as a round patch too, so the edge is as smooth as a clean stroke
   if (ev.full && ev.r) {
-    const px = (ev.x + MAP_W / 2) / CELL * PX, py = (ev.z + MAP_H / 2) / CELL * PX, pr = ev.r / CELL * PX;
-    pctx.save(); pctx.beginPath(); pctx.arc(px, py, pr, 0, Math.PI * 2); pctx.clip();
-    const cx0 = Math.max(0, Math.floor((px - pr) / PX)), cx1 = Math.min(GW - 1, Math.ceil((px + pr) / PX)), cz0 = Math.max(0, Math.floor((py - pr) / PX)), cz1 = Math.min(GH - 1, Math.ceil((py + pr) / PX));
-    for (let cz = cz0; cz <= cz1; cz++) for (let cx = cx0; cx <= cx1; cx++) dirtCell(cx, cz);
-    pctx.restore();
+    pctx.beginPath(); pctx.arc((ev.x + MAP_W / 2) / CELL * PX, (ev.z + MAP_H / 2) / CELL * PX, ev.r / CELL * PX, 0, Math.PI * 2);
+    pctx.globalCompositeOperation = 'destination-out'; pctx.fill(); pctx.globalCompositeOperation = 'source-over';
   }
   touchFloor();
 }
 function paintGrid(grid) {   // full repaint from a grid (rejoin)
+  clearFloor();
   for (let cz = 0; cz < GH; cz++) for (let cx = 0; cx < GW; cx++) {
     const v = grid[cz * GW + cx];
-    if (v === 1 || v === 2) { pctx.fillStyle = PLAYER_CSS[v - 1]; pctx.fillRect(cx * PX, cz * PX, PX, PX); } else dirtCell(cx, cz);
+    if (v === 1 || v === 2) { pctx.fillStyle = TINT[v - 1]; pctx.fillRect(cx * PX, cz * PX, PX, PX); }
   }
-  touchFloor();
 }
 const world = new THREE.Group(); scene.add(world);   // the house: hidden while the main menu's attract scene is showing
-// Lawn around the house: grass with mown stripes and a few flowers, a paved apron along the walls.
-function makeLawn() {
-  const SZ = 120, PPU = 12, c = document.createElement('canvas'); c.width = c.height = SZ * PPU;
-  const g = c.getContext('2d');
-  g.fillStyle = '#6fae4a'; g.fillRect(0, 0, c.width, c.height);
-  for (let i = 0; i < 24; i++) { g.fillStyle = i % 2 ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)'; g.fillRect(i * c.width / 24, 0, c.width / 24, c.height); }   // mown stripes
-  for (let i = 0; i < 9000; i++) {   // grass blades / darker tufts
-    const x = hash(i, 1) * c.width, y = hash(i, 2) * c.height, k = hash(i, 3);
-    g.fillStyle = k < 0.5 ? 'rgba(40,110,30,.45)' : 'rgba(170,220,110,.45)';
-    g.fillRect(x, y, 2 + k * 3, 1.5);
-  }
-  for (let i = 0; i < 260; i++) {   // flowers, kept off the house
-    const x = hash(i, 4) * c.width, y = hash(i, 5) * c.height;
-    const wx = x / PPU - SZ / 2, wz = y / PPU - SZ / 2;
-    if (Math.abs(wx) < MAP_W / 2 + 3 && Math.abs(wz) < MAP_H / 2 + 3) continue;
-    g.fillStyle = ['#fde047', '#f9a8d4', '#fff', '#fb923c'][i % 4];
-    g.beginPath(); g.arc(x, y, 3 + hash(i, 6) * 2, 0, Math.PI * 2); g.fill();
-  }
-  // paved apron with slabs
-  const ax = (SZ / 2 - MAP_W / 2 - 2.2) * PPU, az = (SZ / 2 - MAP_H / 2 - 2.2) * PPU, aw = (MAP_W + 4.4) * PPU, ah = (MAP_H + 4.4) * PPU;
-  g.fillStyle = '#cfc6b3'; g.fillRect(ax, az, aw, ah);
-  g.strokeStyle = 'rgba(90,80,70,.35)'; g.lineWidth = 2;
-  for (let x = ax; x <= ax + aw; x += 2 * PPU) { g.beginPath(); g.moveTo(x, az); g.lineTo(x, az + ah); g.stroke(); }
-  for (let y = az; y <= az + ah; y += 2 * PPU) { g.beginPath(); g.moveTo(ax, y); g.lineTo(ax + aw, y); g.stroke(); }
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(SZ, SZ), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
-  m.rotation.x = -Math.PI / 2; m.position.y = -0.02; m.receiveShadow = true;
-  return m;
+// The painted house, drawn first as a full-screen backdrop. `view` is the part of the painting on screen, in painting
+// pixels (x0, y0, x1, y1); outside the painting is its charcoal background.
+const paintTex = await new THREE.TextureLoader().loadAsync(`./assets/${PAINT.file}`);
+paintTex.colorSpace = THREE.SRGBColorSpace; paintTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+  uniforms: { map: { value: paintTex }, view: { value: new THREE.Vector4(0, 0, PAINT.width, PAINT.height) }, size: { value: new THREE.Vector2(PAINT.width, PAINT.height) }, bg: { value: new THREE.Color(0x24262c) } },   // = the painting's flattened background
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `uniform sampler2D map; uniform vec4 view; uniform vec2 size; uniform vec3 bg; varying vec2 vUv;
+    void main() {
+      vec2 p = vec2(mix(view.x, view.z, vUv.x), mix(view.w, view.y, vUv.y));   // painting pixel under this screen pixel
+      gl_FragColor = vec4(p.x < 0.0 || p.y < 0.0 || p.x > size.x || p.y > size.y ? bg : texture2D(map, vec2(p.x / size.x, 1.0 - p.y / size.y)).rgb, 1.0);
+      #include <colorspace_fragment>
+    }`,
+  depthTest: false, depthWrite: false,
+}));
+backdrop.frustumCulled = false; backdrop.renderOrder = -1e9; world.add(backdrop);
+// Grime and tints lie on the floor (unlit, so the painting's colours are kept), above a shadow-only layer for the vacuums.
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP_W, MAP_H), new THREE.MeshBasicMaterial({ map: floorTex, transparent: true, depthWrite: false }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = 0.004; world.add(floor);
+const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(MAP_W, MAP_H), new THREE.ShadowMaterial({ opacity: 0.3, depthWrite: false }));
+shadowFloor.rotation.x = -Math.PI / 2; shadowFloor.position.y = 0.002; shadowFloor.receiveShadow = true; world.add(shadowFloor);
+
+// Depth occluders: invisible shapes where the painting has furniture and the front outer wall. Whatever the game draws
+// behind them (grime, vacuums, inner walls) is hidden there, so the painted thing stays in front. Drawn before
+// everything else that writes colour.
+const occluderMat = new THREE.MeshBasicMaterial({ colorWrite: false });
+function addOccluder(x0, z0, x1, z1, h, oval = false) {
+  const geo = oval ? new THREE.CylinderGeometry(0.5, 0.5, h, 32).scale(x1 - x0, 1, z1 - z0) : new THREE.BoxGeometry(x1 - x0, h, z1 - z0);
+  const m = new THREE.Mesh(geo, occluderMat);
+  m.position.set((x0 + x1) / 2, h / 2, (z0 + z1) / 2); m.renderOrder = -1000; world.add(m);
 }
-world.add(makeLawn());
-scene.background = new THREE.Color(0x6fae4a);
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(MAP_W, MAP_H), new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.55 }));
-floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; world.add(floor);
+// slightly inside each footprint: a vacuum that only grazes a painted edge stays visible
+for (const f of layout.furniture) { const r = rectOf(f), s = 0.08; addOccluder(r.x0 + s, r.z0 + s, r.x1 - s, r.z1 - s, f.h ?? 1, f.shape === 'oval'); }
+addOccluder(-MAP_W / 2, MAP_H / 2 - 0.4, MAP_W / 2, MAP_H / 2, layout.wallHeight);   // front (south) outer wall
+
+// Inner walls, in the painted walls' look: plum top, warm cream faces. Outer walls are part of the painting.
+const isOuter = w => w.x0 <= -MAP_W / 2 + 1e-6 || w.x1 >= MAP_W / 2 - 1e-6 || w.z0 <= -MAP_H / 2 + 1e-6 || w.z1 >= MAP_H / 2 - 1e-6;
+// flat colours = the texture's (art/house/textures/NOTES.txt); used for the thin wall ends and if the texture is missing
+const wallTop = new THREE.MeshBasicMaterial({ color: 0x775862 }), wallFace = new THREE.MeshBasicMaterial({ color: 0xfcc787 }), wallSide = new THREE.MeshBasicMaterial({ color: 0xd6a973 });
+const wallTex = await new THREE.TextureLoader().loadAsync('./assets/inner-wall.png').catch(() => null);   // Codex's 256×256: rows 0–63 top, 64–255 face
+if (wallTex) { wallTex.colorSpace = THREE.SRGBColorSpace; wallTex.wrapS = THREE.RepeatWrapping; wallTex.anisotropy = 4; }
+function wallMat(base, len, part) {   // part: 'top' (0.4 m across) or 'face' (wall height tall); the texture repeats along the wall
+  if (!wallTex) return base;
+  const t = wallTex.clone(); t.needsUpdate = true;
+  if (part === 'top') { t.repeat.set(len / 1.6, 0.25); t.offset.set(0, 0.75); } else { t.repeat.set(len / 2.5, 0.75); t.offset.set(0, 0); }
+  return new THREE.MeshBasicMaterial({ map: t, color: base === wallSide ? 0xdddddd : 0xffffff });
+}
+for (const w of layout.walls.filter(w => !isOuter(w))) {
+  const along = (w.x1 - w.x0) >= (w.z1 - w.z0), len = along ? w.x1 - w.x0 : w.z1 - w.z0, thick = along ? w.z1 - w.z0 : w.x1 - w.x0, H = layout.wallHeight;
+  // built along local x, then turned for north-south walls, so the texture always runs along the wall
+  // BoxGeometry faces: +x, -x, +y, -y, +z, -z. The camera looks from the south, so south faces get the lit cream.
+  // A north-south wall is turned +90°: local -x faces south, local ±z become its east / west sides.
+  const faces = along
+    ? [wallSide, wallSide, wallMat(wallTop, len, 'top'), wallTop, wallMat(wallFace, len, 'face'), wallFace]
+    : [wallSide, wallMat(wallFace, thick, 'face'), wallMat(wallTop, len, 'top'), wallTop, wallMat(wallSide, len, 'face'), wallMat(wallSide, len, 'face')];
+  const m = new THREE.Mesh(new THREE.BoxGeometry(len, H, thick), faces);
+  m.position.set((w.x0 + w.x1) / 2, H / 2, (w.z0 + w.z1) / 2);
+  if (!along) m.rotation.y = Math.PI / 2;
+  world.add(m);
+}
 
 // ---------------------------------------------------------------- models and static scene
 const loader = new GLTFLoader();
@@ -146,13 +165,9 @@ async function loadModel(name) {
   gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   models[name] = gltf.scene;
 }
-await Promise.all(['house', 'vacuum', 'dock', ...new Set(layout.furniture.map(f => f.model))].map(loadModel));
-world.add(models.house.clone());
-for (const f of layout.furniture) {
-  const m = models[f.model].clone(); m.position.set(f.x, 0, f.z); m.rotation.y = THREE.MathUtils.degToRad(f.rot); world.add(m);
-}
+await Promise.all(['vacuum', 'dock'].map(loadModel));   // the furniture is painted
 for (const d of layout.docks) {
-  const m = models.dock.clone(); m.position.set(d.x, 0, d.z); m.rotation.y = THREE.MathUtils.degToRad(d.rot); world.add(m);
+  const m = models.dock.clone(); m.position.set(d.x, 0, d.z); m.rotation.y = -THREE.MathUtils.degToRad(d.rot); world.add(m);   // same turn convention as the vacuums
 }
 const spotMat = new THREE.MeshBasicMaterial({ color: 0xfff1a8, transparent: true, opacity: 0.35 });
 for (const s of layout.powerupSpots) {
@@ -328,7 +343,7 @@ function animatePickup(m) {
   const pop = age < 0.55 ? Math.max(0.001, easeOutBack(age / 0.55)) : 1;
   badge.scale.setScalar(pop); glow.scale.setScalar(2.4 * pop);
   badge.position.y = glow.position.y = 1.05 + Math.sin(T * 2.6 + phase) * 0.12;
-  badge.lookAt(camera.position);                                    // always face the camera so the icon reads
+  badge.lookAt(houseCam.position);                                  // always face the camera so the icon reads
   badge.rotateY(Math.sin(T * 1.8 + phase) * 0.45);                  // gentle coin wobble
   glow.material.opacity = 0.6 + Math.sin(T * 4 + phase) * 0.15;
   const ph = (T * 0.9 + phase) % 1; pulse.scale.setScalar(1 + ph * 1.3); pulse.material.opacity = 0.7 * (1 - ph);
@@ -426,9 +441,9 @@ try { const w = JSON.parse(sessionStorage.getItem('dd-wins') || 'null'); if (Arr
 function handleEvent(ev, view) {
   const t = view.time;
   switch (ev.e) {
-    case 'reset': fillDirt(); for (const [k, m] of entityMeshes) { scene.remove(m); } entityMeshes.clear(); for (const st of stats) { st.stolen = st.dumps = st.pickups = 0; } bumps = 0; reveal.active = false; document.body.classList.remove('results'); break;
+    case 'reset': clearFloor(); for (const [k, m] of entityMeshes) { scene.remove(m); } entityMeshes.clear(); for (const st of stats) { st.stolen = st.dumps = st.pickups = 0; } bumps = 0; reveal.active = false; document.body.classList.remove('results'); break;
     case 'clean': paintClean(ev.x, ev.z, ev.r, ev.o); if (ev.s) stats[ev.o - 1].stolen += ev.s; break;
-    case 'dirt': paintDirt(ev); break;
+    case 'dirt': eraseTrail(ev); break;
     case 'toggle': burst(ev.x, ev.z, ev.mode === 'clean' ? 0xbbf7d0 : 0x92400e, 8, 1.2, 1.5, 0.7); if (ev.mode === 'dump') stats[ev.p].dumps++; break;
     case 'pickup': burst(ev.x, ev.z, PU_COLOR[ev.type], 10, 1.5, 2); stats[ev.p].pickups++; break;
     case 'use': if (ev.p === me || mode === 'local' || !ev.auto) flashBanner(ev.auto && ev.p === me ? `${POWERUPS[ev.type].name.toUpperCase()}!` : `${PLAYER_NAMES[ev.p]}: ${POWERUPS[ev.type].name}!`, 800); break;
@@ -678,9 +693,9 @@ function startLocal(kind) {
   setTags(); showCard(null); hud.status.textContent = '';
   document.body.classList.toggle('trymode', kind === 'try');
 }
-function startOnline(msg) { showCard(null); endReveal(); document.body.classList.remove('results'); revealRun++; laps++; cam.init = false; cam.blend = 0; mode = 'online'; me = -1; bot = null; pred.init = false; view = emptyView(); fillDirt(); net.connect(msg); setTags(); }   // the attract scene keeps running until the match starts
+function startOnline(msg) { showCard(null); endReveal(); document.body.classList.remove('results'); revealRun++; laps++; cam.init = false; cam.blend = 0; mode = 'online'; me = -1; bot = null; pred.init = false; view = emptyView(); clearFloor(); net.connect(msg); setTags(); }   // the attract scene keeps running until the match starts
 function emptyView() { return { phase: 'idle', time: 0, timeLeft: C.MATCH_TIME, countdown: 0, counts: [0, 0, 0], totalCells: 1, vacs: [0, 1].map(i => ({ x: layout.docks[i].x, z: layout.docks[i].z, h: 0, mode: 'clean', bin: 0, item: null, stuckUntil: 0, turboUntil: 0, wideUntil: 0, shieldUntil: 0 })), pickups: [], traps: [], spills: [] }; }
-function goMenu() { endReveal(); revealRun++; document.body.classList.remove('trymode', 'results'); net.close(); mode = 'menu'; me = -1; bot = null; view = emptyView(); fillDirt(); syncEntities(view, 0); trails.clear(); setTopper(0, myTopper); setTopper(1, 'none'); renderTopperBar(); showCard(null); hud.status.textContent = ''; enterMenuScene(); }
+function goMenu() { endReveal(); revealRun++; document.body.classList.remove('trymode', 'results'); net.close(); mode = 'menu'; me = -1; bot = null; view = emptyView(); clearFloor(); syncEntities(view, 0); trails.clear(); setTopper(0, myTopper); setTopper(1, 'none'); renderTopperBar(); showCard(null); hud.status.textContent = ''; enterMenuScene(); }
 function playAgain() { if (mode === 'online') { net.again(); endReveal(); document.body.classList.remove('results'); revealRun++; showCard(null); } else startLocal(mode); }
 function drainEvents(list) { for (const ev of list) handleEvent(ev, view); list.length = 0; }
 
@@ -802,19 +817,26 @@ function update(dt) {
 
 // Camera. Overview = the whole house (menu, countdown, reveal, and always in 2-players-one-keyboard).
 // Follow = about 1.6 rooms around your own vacuum (solo and online, while the match is on).
+// Both are windows onto the painting (painting pixels), shown through houseCam.setViewOffset: never a 3D move.
 const FOLLOW_AREA = 170;                // m² of floor in view (≈ 19 × 9 on a phone held sideways, about 1.6 rooms); equal on every screen shape
-const TILT = new THREE.Vector3(0, 0.96, 0.28).normalize();
-const cam = { overDist: 30, followDist: 10, visW: 14, visH: 6.5, blend: 0, tx: 0, tz: 0, lx: 0, lz: 0, vx: 0, vz: 0, init: false };
+const HOUSE_PX = { x0: 20, y0: 30, x1: 2900, y1: 1600 };   // the house in the painting (walls included), for the overview
+const PX_PER_M2 = (() => { const a = toPaint(0, 0, 0), b = toPaint(1, 0, 0), c = toPaint(0, 0, 1); return Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])); })();
+const cam = { aspect: 1, overview: [0, 0, 1, 1], followW: 1, followH: 1, blend: 0, tx: 0, tz: 0, lx: 0, lz: 0, vx: 0, vz: 0, init: false };
 function fitCamera() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
-  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  cam.overDist = Math.max((MAP_H + 5) / (2 * t), (MAP_W + 2) / (2 * t * camera.aspect));
-  cam.visH = Math.sqrt(FOLLOW_AREA / camera.aspect); cam.visW = cam.visH * camera.aspect;
-  cam.followDist = cam.visH / (2 * t);
+  cam.aspect = w / h;
+  // overview: the whole house fits the screen, centred (cx, cy, width, height)
+  const hw = HOUSE_PX.x1 - HOUSE_PX.x0, hh = HOUSE_PX.y1 - HOUSE_PX.y0, ow = Math.max(hw, hh * cam.aspect) * 1.02;
+  cam.overview = [(HOUSE_PX.x0 + HOUSE_PX.x1) / 2, (HOUSE_PX.y0 + HOUSE_PX.y1) / 2, ow, ow / cam.aspect];
+  cam.followH = Math.sqrt(FOLLOW_AREA * PX_PER_M2 / cam.aspect); cam.followW = cam.followH * cam.aspect;
+}
+function setView(cx, cy, w, h) {   // show this window of the painting: backdrop and 3D both
+  const x0 = cx - w / 2, y0 = cy - h / 2;
+  houseCam.setViewOffset(PAINT.width, PAINT.height, x0, y0, w, h);
+  backdrop.material.uniforms.view.value.set(x0, y0, x0 + w, y0 + h);
 }
 function followAllowed() { return me >= 0 && mode !== 'local' && mode !== 'menu'; }   // solo, online and try
-const _p = new THREE.Vector3(), _q = new THREE.Vector3(), _l = new THREE.Vector3(), _m = new THREE.Vector3();
 function updateCamera(dt) {
   if (menuOn) { menu.placeCamera(); return; }
   const follow = (followAllowed() && (view.phase === 'playing' || view.phase === 'paused')) || reveal.cam;
@@ -829,17 +851,17 @@ function updateCamera(dt) {
     cam.vx += ((V.x - cam.lx) / Math.max(dt, 1e-3) - cam.vx) * k; cam.vz += ((V.z - cam.lz) / Math.max(dt, 1e-3) - cam.vz) * k;
     cam.lx = V.x; cam.lz = V.z;
     const sp = Math.hypot(cam.vx, cam.vz), ahead = Math.min(1, sp / C.SPEED) * 1.5;
-    let dx = V.x + (sp > 0.05 ? cam.vx / sp * ahead : 0), dz = V.z + (sp > 0.05 ? cam.vz / sp * ahead : 0);
-    // keep the view inside the outer walls
-    const hw = Math.max(0, MAP_W / 2 - cam.visW / 2 + 0.2), hh = Math.max(0, MAP_H / 2 - cam.visH / 2 + 0.2);
-    dx = Math.max(-hw, Math.min(hw, dx)); dz = Math.max(-hh, Math.min(hh, dz));
+    const dx = V.x + (sp > 0.05 ? cam.vx / sp * ahead : 0), dz = V.z + (sp > 0.05 ? cam.vz / sp * ahead : 0);
     const e = 1 - Math.exp(-dt / 0.3);
     cam.tx += (dx - cam.tx) * e; cam.tz += (dz - cam.tz) * e;
   }
   const s = cam.blend * cam.blend * (3 - 2 * cam.blend);       // smoothstep
-  _l.set(0, 0, 0.3); _p.copy(TILT).multiplyScalar(cam.overDist).add(_l);
-  _m.set(cam.tx, 0, cam.tz); _q.copy(TILT).multiplyScalar(cam.followDist).add(_m);
-  camera.position.lerpVectors(_p, _q, s); _l.lerp(_m, s); camera.lookAt(_l);
+  // follow window around the target, kept inside the house picture (centred when it is bigger than the house)
+  let [fx, fy] = toPaint(cam.tx, 0, cam.tz);
+  const clampTo = (c, half, lo, hi) => hi - lo <= 2 * half ? (lo + hi) / 2 : Math.max(lo + half, Math.min(hi - half, c));
+  fx = clampTo(fx, cam.followW / 2, HOUSE_PX.x0, HOUSE_PX.x1); fy = clampTo(fy, cam.followH / 2, HOUSE_PX.y0, HOUSE_PX.y1);
+  const [ox, oy, ow, oh] = cam.overview, mix = (a, b) => a + (b - a) * s;
+  setView(mix(ox, fx), mix(oy, fy), mix(ow, cam.followW), mix(oh, cam.followH));
 }
 
 // Off-screen power-up arrows (follow camera only)
@@ -851,7 +873,7 @@ function updateArrows() {
   if (show) {
     const w = window.innerWidth, h = window.innerHeight, M = 34;
     for (const p of view.pickups) {
-      _a.set(p.x, 1.0, p.z).project(camera);
+      _a.set(p.x, 1.0, p.z).project(houseCam);
       let sx = (_a.x * 0.5 + 0.5) * w, sy = (-_a.y * 0.5 + 0.5) * h;
       if (_a.z < 1 && sx > M && sx < w - M && sy > M && sy < h - M) continue;      // on screen: no arrow
       const cx = w / 2, cy = h / 2; let ddx = sx - cx, ddy = sy - cy;
@@ -891,7 +913,7 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now; frameNo++;
   update(dt); stepParticles(dt);
   if (floorDirty && (frameNo & 1) === 0) { floorTex.needsUpdate = true; floorDirty = false; }   // floor uploads at 30 Hz
-  renderer.render(scene, camera);
+  renderer.render(scene, menuOn ? camera : houseCam);
   adaptResolution(dt);
   requestAnimationFrame(frame);
 }

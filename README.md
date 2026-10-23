@@ -52,8 +52,10 @@ client/
   toppers.js          cosmetic toppers (cone, egg, duck) and their trail effects
   sim.js              ALL game rules — shared by the browser and the server
   bot.js              computer opponent (BFS on a coarse nav grid)
-  assets/layout.json  the map: walls, furniture, docks, power-up spots (game coords)
-  assets/models/      GLB models exported from Blender
+  assets/layout.json  the map: walls, furniture, docks, power-up spots (game coords) + the painting's camera
+  assets/house.jpg    the painted house (2920×1774), drawn as the backdrop
+  assets/inner-wall.png  Codex's 256×256 inner-wall texture (rows 0–63 wall top, 64–255 face + baseboard)
+  assets/models/      GLB models exported from Blender (the game uses vacuum + dock; furniture is painted)
 server/
   server.js           game server: static files + WebSocket rooms, authoritative 30 Hz sim
 test/run.mjs          headless tests (bot match, full online match over WebSockets) — `npm test`
@@ -61,21 +63,34 @@ blender/
   dust-duel-assets.blend   one collection per asset (library row north of the house) + a "Placed" collection showing the real room layout
 docs/
   design.md           summary of the design doc + decisions
-  maps/               map designs, camera design, check.py / draw.py
+  maps/               map designs, camera design, check.py / draw.py, fit-camera.mjs, build-painted-layout.mjs
+  painted-house-design.md   how the painting is used in the game
+art/house/            the house painting: rooms/, stitch/ (tools + notes), textures/, screenshots/
 start.bat             starts the server
 ```
 
-## The map
+## The map: the painted house
 
-Four rooms in a 2×2 grid with single inner walls (no hallway), symmetric under a 180° rotation so both starts are fair. Each room has two doorways; the center where the inner walls meet is closed. All furniture is solid, so doorways are the choke points.
+The house is a painting (`client/assets/house.jpg`, made by Codex as 4 rooms and stitched, see `art/house/`). The game
+draws it as a fixed backdrop and puts only what moves or changes on top. Design: `docs/painted-house-design.md`.
 
-- **Bedroom** (top-left) — Blue's dock is on the left wall. Bed with its headboard against the top wall, nightstand, plant. Blocked area ≈ 19.8.
-- **Kitchen** (bottom-right) — Orange's dock is on the right wall. Counter and fridge along the bottom wall, island in the center, pantry cabinet on the right wall, plant. Blocked area ≈ 19.9.
-- **Living room** (top-right) — TV stand on the top wall, couch in the center facing it, plant (the coffee table was removed: vacuums got stuck between it and the couch). Blocked area ≈ 8.9.
-- **Study** (bottom-left) — desk and bookshelf on the bottom wall, wardrobe on the left wall, plant. Blocked area ≈ 10.9.
-- 10 fixed power-up spots: the four doorways, one in each room, and one near each start room's inner corner.
+- **Camera:** one 3D camera fitted to the painting (`docs/maps/fit-camera.mjs`, fit error ≈ 8 px ≈ 8 cm, stored in
+  `layout.json` → `painting.camera`). It never moves; follow view and overview are a 2D pan/zoom of its view
+  (`setViewOffset`), so the vacuums stay glued to the painted floor on every screen shape.
+- **Floor layer:** grime is a see-through film over the painted floor; cleaned floor shows the painting under the
+  owner's colour at 55%. No grime under walls.
+- **Depth:** invisible "occluder" shapes where the painted furniture and the front wall are (`h` in `layout.json` is
+  the height of everything painted on a piece), so grime, vacuums and inner walls behind them are hidden.
+- **Inner walls** are 3D, 1.88 m tall like the painted walls, with Codex's texture. Outer walls are painted.
+- **Rooms:** house v2 (26 × 16): bedroom, living room, kitchen, bathroom, 4 doorways. Furniture collision is
+  measured on the painting (`docs/maps/build-painted-layout.mjs`).
+- **Docks** stand on the inner wall facing south (Blue in the bathroom, Orange in the kitchen): floor right north of a
+  wall is hidden from the camera, so docks can't go there. Placed by sweeping positions for the fairest split:
+  **1.3%** (Blue 139.0 m² vs Orange 135.5 m²).
 
-Everything comes from `client/assets/layout.json`; coordinates are x right, z down on screen, in the same units as the models (1 unit ≈ 1 m, vacuum diameter 1).
+Coordinates are x right, z down on screen (1 unit ≈ 1 m, vacuum diameter 1).
+To change the map: edit `PAINTED`, docks or spots in `docs/maps/build-painted-layout.mjs` and run
+`node docs/maps/build-painted-layout.mjs --write` (it prints the fairness check).
 
 ## Blender → game
 
@@ -105,7 +120,7 @@ All in `client/sim.js` → `C`: match time, speed, turn rate, brush radius, bin 
 
 ## Map tools
 
-`docs/maps/check.py <layout.json>` checks a layout before it's built: spawn clearance, docks facing into the room, overlaps, unreachable floor, and fairness (which player can drive to each spot first, room by room, plus power-up distances). `docs/maps/draw.py` draws the result. Needs Python with numpy, scipy, matplotlib.
+`docs/maps/check.py <layout.json>` checks a layout before it's built: spawn clearance, docks facing into the room, overlaps, unreachable floor, and fairness (which player can drive to each spot first, room by room, plus power-up distances). `docs/maps/draw.py` draws the result. Needs Python with numpy, scipy, matplotlib. `docs/maps/build-painted-layout.mjs` runs the same fairness check in Node (no Python needed).
 
 
 Open questions: should a bump also spill some of the other vacuum's bin? Are blue and orange the right colors?

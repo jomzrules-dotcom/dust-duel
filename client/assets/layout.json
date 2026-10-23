@@ -1,295 +1,399 @@
 {
-  "name": "House",
+  "name": "Painted house",
   "size": {
-    "w": 24,
-    "h": 18
+    "w": 26,
+    "h": 16
   },
-  "wallHeight": 1.5,
+  "wallHeight": 1.88,
+  "spawnOffset": 0.2,
+  "painting": {
+    "file": "house.jpg",
+    "width": 2920,
+    "height": 1774,
+    "camera": {
+      "pos": [
+        0.11858067820767745,
+        157.50131934735822,
+        56.72158116438536
+      ],
+      "targetZ": 0.6980708497174984,
+      "vfov": 6.566834357772724,
+      "wallH": 1.8797402739970952
+    }
+  },
   "rooms": [
     {
       "name": "Bedroom",
-      "x0": -11.8,
-      "z0": -8.8,
+      "x0": -12.8,
+      "z0": -7.8,
       "x1": -0.2,
       "z1": -0.2,
       "start": 1
     },
     {
-      "name": "Living room",
+      "name": "Living Room",
       "x0": 0.2,
-      "z0": -8.8,
-      "x1": 11.8,
-      "z1": -0.2
-    },
-    {
-      "name": "Study",
-      "x0": -11.8,
-      "z0": 0.2,
-      "x1": -0.2,
-      "z1": 8.8
+      "z0": -7.8,
+      "x1": 12.8,
+      "z1": -0.2,
+      "start": 0
     },
     {
       "name": "Kitchen",
       "x0": 0.2,
       "z0": 0.2,
-      "x1": 11.8,
-      "z1": 8.8,
+      "x1": 12.8,
+      "z1": 7.8,
       "start": 2
+    },
+    {
+      "name": "Toilet/Bathroom",
+      "x0": -12.8,
+      "z0": 0.2,
+      "x1": -0.2,
+      "z1": 7.8,
+      "start": 0
     }
   ],
-  "spawnOffset": 0.2,
   "walls": [
     {
-      "x0": -12,
-      "z0": -9.0,
-      "x1": 12,
-      "z1": -8.6
+      "x0": -13,
+      "z0": -8,
+      "x1": 13,
+      "z1": -7.6
     },
     {
-      "x0": -12,
-      "z0": 8.6,
-      "x1": 12,
-      "z1": 9.0
+      "x0": -13,
+      "z0": 7.6,
+      "x1": 13,
+      "z1": 8
     },
     {
-      "x0": -12.0,
-      "z0": -9,
-      "x1": -11.6,
-      "z1": 9
+      "x0": -13,
+      "z0": -7.6,
+      "x1": -12.6,
+      "z1": 7.6
     },
     {
-      "x0": 11.6,
-      "z0": -9,
-      "x1": 12.0,
-      "z1": 9
-    },
-    {
-      "x0": -0.2,
-      "z0": -9,
-      "x1": 0.2,
-      "z1": -6.5
+      "x0": 12.6,
+      "z0": -7.6,
+      "x1": 13,
+      "z1": 7.6
     },
     {
       "x0": -0.2,
-      "z0": -3.5,
+      "z0": -7.6,
       "x1": 0.2,
-      "z1": 3.5
+      "z1": -6.2
     },
     {
       "x0": -0.2,
-      "z0": 6.5,
+      "z0": -3.4,
       "x1": 0.2,
-      "z1": 9
+      "z1": 3.4
     },
     {
-      "x0": -12,
+      "x0": -0.2,
+      "z0": 6.2,
+      "x1": 0.2,
+      "z1": 7.6
+    },
+    {
+      "x0": -12.6,
       "z0": -0.2,
-      "x1": -7.5,
+      "x1": -9,
       "z1": 0.2
     },
     {
-      "x0": -4.5,
+      "x0": -6.2,
       "z0": -0.2,
-      "x1": 4.5,
+      "x1": -0.2,
       "z1": 0.2
     },
     {
-      "x0": 7.5,
+      "x0": 0.2,
       "z0": -0.2,
-      "x1": 12,
+      "x1": 6.2,
+      "z1": 0.2
+    },
+    {
+      "x0": 9,
+      "z0": -0.2,
+      "x1": 12.6,
       "z1": 0.2
     }
   ],
   "furniture": [
     {
-      "model": "plant",
-      "x": -11.025,
-      "z": 8.045,
+      "model": null,
+      "name": "wardrobe",
+      "x": -11.63,
+      "z": -4.64,
+      "w": 1.94,
+      "d": 3.33,
       "rot": 0,
-      "w": 1.15,
-      "d": 1.11,
+      "h": 2.5,
       "blocks": true
     },
     {
-      "model": "wardrobe",
-      "x": -10.665,
-      "z": 4.5,
-      "rot": 0,
-      "w": 1.87,
-      "d": 4.0,
-      "blocks": true
-    },
-    {
-      "model": "desk",
-      "x": -6.0,
-      "z": 8.1,
-      "rot": 0,
-      "w": 2.0,
-      "d": 1.0,
-      "blocks": true
-    },
-    {
-      "model": "bookshelf",
-      "x": -3.3,
-      "z": 8.335,
-      "rot": 0,
-      "w": 1.8,
-      "d": 0.53,
-      "blocks": true
-    },
-    {
-      "model": "counter",
-      "x": 4.25,
-      "z": 8.04,
-      "rot": 0,
-      "w": 8.1,
+      "model": null,
+      "name": "basket + plant",
+      "x": -11.75,
+      "z": -1.59,
+      "w": 1.71,
       "d": 1.12,
-      "blocks": true
-    },
-    {
-      "model": "island",
-      "x": 6.0,
-      "z": 4.5,
       "rot": 0,
-      "w": 3.15,
-      "d": 1.12,
-      "blocks": true
+      "h": 1.2,
+      "blocks": true,
+      "shape": "oval"
     },
     {
-      "model": "fridge",
-      "x": 8.75,
-      "z": 8.06,
-      "rot": 90,
-      "w": 1.08,
-      "d": 0.9,
-      "blocks": true
-    },
-    {
-      "model": "wardrobe",
-      "x": 10.665,
-      "z": 5.0,
-      "rot": 180,
-      "w": 1.87,
-      "d": 4.0,
-      "blocks": true
-    },
-    {
-      "model": "plant",
-      "x": 10.91,
-      "z": 8.045,
+      "model": null,
+      "name": "nightstand",
+      "x": -7.72,
+      "z": -6.18,
+      "w": 1.14,
+      "d": 0.6,
       "rot": 0,
-      "w": 1.15,
-      "d": 1.11,
+      "h": 1.15,
       "blocks": true
     },
     {
-      "model": "plant",
-      "x": -10.89,
-      "z": -8.045,
-      "rot": 0,
-      "w": 1.15,
-      "d": 1.11,
-      "blocks": true
-    },
-    {
-      "model": "bed",
-      "x": -7.8,
-      "z": -6.25,
-      "rot": 180,
-      "w": 4.0,
-      "d": 4.7,
-      "blocks": true
-    },
-    {
-      "model": "nightstand",
+      "model": null,
+      "name": "nightstand",
       "x": -3.45,
-      "z": -8.06,
+      "z": -6.18,
+      "w": 1.13,
+      "d": 0.6,
       "rot": 0,
-      "w": 1.0,
-      "d": 1.08,
+      "h": 1.15,
       "blocks": true
     },
     {
-      "model": "sofa",
-      "x": 5.97,
-      "z": -4.7,
+      "model": null,
+      "name": "bed",
+      "x": -5.63,
+      "z": -5.17,
+      "w": 3.22,
+      "d": 4.17,
       "rot": 0,
-      "w": 4.0,
-      "d": 1.8,
+      "h": 0.9,
       "blocks": true
     },
     {
-      "model": "tv_stand",
-      "x": 6.0,
-      "z": -8.35,
+      "model": null,
+      "name": "bookshelf",
+      "x": 3.02,
+      "z": -6.37,
+      "w": 2.52,
+      "d": 0.46,
       "rot": 0,
-      "w": 1.8,
+      "h": 1.75,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "floor lamp",
+      "x": 5,
+      "z": -6.25,
+      "w": 0.55,
+      "d": 0.24,
+      "rot": 0,
+      "h": 1.6,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "plant",
+      "x": 10.48,
+      "z": -6.47,
+      "w": 0.78,
       "d": 0.5,
+      "rot": 0,
+      "h": 1.2,
+      "blocks": true,
+      "shape": "oval"
+    },
+    {
+      "model": null,
+      "name": "tv stand",
+      "x": 11.84,
+      "z": -3.4,
+      "w": 1.5,
+      "d": 3.57,
+      "rot": 0,
+      "h": 1.6,
       "blocks": true
     },
     {
-      "model": "plant",
-      "x": 11.025,
-      "z": -8.045,
+      "model": null,
+      "name": "sofa + coffee table",
+      "x": 5.87,
+      "z": -3.29,
+      "w": 3.8,
+      "d": 3.44,
       "rot": 0,
-      "w": 1.15,
-      "d": 1.11,
+      "h": 0.85,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "sink",
+      "x": -11.99,
+      "z": 2.19,
+      "w": 1.21,
+      "d": 2,
+      "rot": 0,
+      "h": 0.9,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "towel rack",
+      "x": -10.9,
+      "z": 1.08,
+      "w": 1.09,
+      "d": 0.34,
+      "rot": 0,
+      "h": 0.9,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "toilet",
+      "x": -12,
+      "z": 4.35,
+      "w": 1.2,
+      "d": 1.07,
+      "rot": 0,
+      "h": 0.75,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "plant",
+      "x": -12.25,
+      "z": 6.15,
+      "w": 0.7,
+      "d": 0.84,
+      "rot": 0,
+      "h": 1.2,
+      "blocks": true,
+      "shape": "oval"
+    },
+    {
+      "model": null,
+      "name": "bathtub",
+      "x": -6.18,
+      "z": 2.96,
+      "w": 3.79,
+      "d": 2.16,
+      "rot": 0,
+      "h": 0.6,
+      "blocks": true,
+      "shape": "oval"
+    },
+    {
+      "model": null,
+      "name": "basket",
+      "x": -1.57,
+      "z": 6.35,
+      "w": 1.23,
+      "d": 1.01,
+      "rot": 0,
+      "h": 0.6,
+      "blocks": true,
+      "shape": "oval"
+    },
+    {
+      "model": null,
+      "name": "fridge",
+      "x": 11.97,
+      "z": 1.05,
+      "w": 1.26,
+      "d": 1.66,
+      "rot": 0,
+      "h": 1.9,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "counter",
+      "x": 12.14,
+      "z": 3.86,
+      "w": 0.93,
+      "d": 4.87,
+      "rot": 0,
+      "h": 1.2,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "counter",
+      "x": 9.38,
+      "z": 6.47,
+      "w": 6.45,
+      "d": 0.81,
+      "rot": 0,
+      "h": 0.95,
+      "blocks": true
+    },
+    {
+      "model": null,
+      "name": "dining table + chairs",
+      "x": 5.66,
+      "z": 3.49,
+      "w": 4.88,
+      "d": 3.57,
+      "rot": 0,
+      "h": 0.9,
       "blocks": true
     }
   ],
   "docks": [
     {
-      "x": -11.3,
-      "z": -1.0,
-      "rot": 0
+      "x": -0.7,
+      "z": 0.7,
+      "rot": 90
     },
     {
-      "x": 11.3,
-      "z": 1.0,
-      "rot": 180
+      "x": 4.5,
+      "z": 0.7,
+      "rot": 90
     }
   ],
   "powerupSpots": [
     {
-      "x": 0,
-      "z": -5
+      "x": -3,
+      "z": -4.3
     },
     {
-      "x": 0,
-      "z": 5
+      "x": -9.6,
+      "z": -1.6
     },
     {
-      "x": -6,
-      "z": 0
+      "x": 1.6,
+      "z": -4.6
     },
     {
-      "x": 6,
-      "z": 0
+      "x": 9.6,
+      "z": -1.4
     },
     {
-      "x": -8.5,
-      "z": -2.0
+      "x": -2.4,
+      "z": 4.2
     },
     {
-      "x": 8.5,
-      "z": 2.0
+      "x": -6.5,
+      "z": 5.6
     },
     {
-      "x": 9.0,
-      "z": -5.0
+      "x": 2.2,
+      "z": 4.4
     },
     {
-      "x": -9.0,
-      "z": 5.0
-    },
-    {
-      "x": -3.0,
-      "z": -2.5
-    },
-    {
-      "x": 3.0,
-      "z": 2.5
+      "x": 9.8,
+      "z": 4.6
     }
-  ],
-  "note": "Game coords: x right, z down on screen; Blender y = -z. rot = degrees around the up axis. Four rooms in a 2x2 grid with single inner walls; each room has two doorways (the center crossing is closed). All furniture is solid. Symmetric under a 180-degree rotation so both starts are fair."
+  ]
 }
