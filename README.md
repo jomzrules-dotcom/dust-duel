@@ -101,7 +101,7 @@ The server runs the real game (`sim.js`) 30 times a second. Players only send in
 
 ## Tuning knobs
 
-All in `client/sim.js` → `C`: match time, speed, turn rate, brush radius, bin size (`BIN_CAP`), dump rate, power-up timing. Bot behaviour in `bot.js` (reaction time, when it dumps, when it uses items). Camera zoom: `FOLLOW_AREA` in `game.js` (m² of floor in view; 91 ≈ one room).
+All in `client/sim.js` → `C`: match time, speed, turn rate, brush radius, bin size (`BIN_CAP`), dump rate, power-up timing. Bot behaviour in `bot.js` (reaction time, when it dumps, when it uses items). Camera zoom: `FOLLOW_AREA` in `game.js` (m² of floor in view; 170 ≈ 1.6 rooms, 91 ≈ one room).
 
 ## Map tools
 

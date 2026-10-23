@@ -32,7 +32,7 @@ Balance (after bot tests): brush radius 0.8, bin 2400 cells (~19 s of cleaning),
 
 ## Presentation (decided 2026-10-21)
 - No live score during play; you only see your own bin and item.
-- Camera follows your own vacuum at about one room (equal floor area on every screen shape). Whole-house view only during the countdown, at the final reveal, and in 2-players-one-keyboard.
+- Camera follows your own vacuum at about 1.6 rooms (equal floor area on every screen shape). Whole-house view only during the countdown, at the final reveal, and in 2-players-one-keyboard.
 - No minimap. Edge arrows point to off-screen power-ups.
 - End of match: TIME'S UP, camera pulls back to the whole house, then a tug-of-war bar (split of the cleaned floor only) wrestles for ~4 s before the winner pops in with confetti.
 - Dirty floor is grimy (blotches, crumbs, hair); clean floor is a bright player tint.
@@ -45,7 +45,7 @@ Balance (after bot tests): brush radius 0.8, bin 2400 cells (~19 s of cleaning),
 Design first (drawn plan or mockup + numbers), review, then build.
 
 ## Decisions so far
-Boosts (Turbo, Wide brush) apply on pickup; Shield / Cables / Spill are held and fired with the item button · camera follows your vacuum at about one room, whole house only in the countdown, the reveal and 2-players-one-keyboard · no live score, no minimap · Name Dust Duel · dump only on opponent's floor · bumping yes · 1-minute matches · computer opponent yes · own-PC hosting first · shield counters cables + spill · no floor types · invisible tiles · 3D · furniture is solid, nothing is drive-under.
+Boosts (Turbo, Wide brush) apply on pickup; Shield / Cables / Spill are held and fired with the item button · camera follows your vacuum at about 1.6 rooms, whole house only in the countdown, the reveal and 2-players-one-keyboard · no live score, no minimap · Name Dust Duel · dump only on opponent's floor · bumping yes · 1-minute matches · computer opponent yes · own-PC hosting first · shield counters cables + spill · no floor types · invisible tiles · 3D · furniture is solid, nothing is drive-under.
 
 Still open: player colors (blue/orange?); should a bump also spill part of the other bin?
 

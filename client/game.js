@@ -801,8 +801,8 @@ function update(dt) {
 }
 
 // Camera. Overview = the whole house (menu, countdown, reveal, and always in 2-players-one-keyboard).
-// Follow = about one room around your own vacuum (solo and online, while the match is on).
-const FOLLOW_AREA = 91;                 // m² of floor in view (≈ 14 × 6.5 on a phone held sideways); equal on every screen shape
+// Follow = about 1.6 rooms around your own vacuum (solo and online, while the match is on).
+const FOLLOW_AREA = 170;                // m² of floor in view (≈ 19 × 9 on a phone held sideways, about 1.6 rooms); equal on every screen shape
 const TILT = new THREE.Vector3(0, 0.96, 0.28).normalize();
 const cam = { overDist: 30, followDist: 10, visW: 14, visH: 6.5, blend: 0, tx: 0, tz: 0, lx: 0, lz: 0, vx: 0, vz: 0, init: false };
 function fitCamera() {
