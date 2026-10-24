@@ -7,6 +7,12 @@
   the inner wall facing south: Blue in the bathroom (−0.7, 0.7), Orange in the kitchen (4.5, 0.7). Fairness split 1.3%.
 - **No grime at all (boss, after the build):** the floor layer shows only the trails (owner's tint at 55% over the
   painting); dump and spill erase the other player's trail. Section 5's grime film is gone.
+- **Trail outline: DROPPED by the boss ("remove outline"), never built.** Trails stay the plain 55% tint. The design
+  is kept for reference (mockup `art/house/DESIGN_TRAIL_OUTLINE.png`): without grime,
+  trails are faint where the colour matches the floor. Keep the 55% tint and add, per player, a 7 cm bright edge (a
+  light, slightly more saturated version of the player colour, 92% opacity) plus a 2 px charcoal keyline outside it
+  (variant B; Codex agrees). Where Blue meets Orange: both bright edges, one shared dark separator. Built in the floor
+  shader (a trail pixel next to a pixel of another owner is edge), so it follows clean, steal, dump and spill.
 - **Grime (superseded):** none under walls (from the camera those cells line up with the painted walls and what hangs on them);
   occluders are oval for the bathtub, baskets and plants, and as tall as what is painted on a piece (lamps, the TV).
 - **Background:** the painting's charcoal outside the house was flattened to one colour (the 4 rooms differed by ~3

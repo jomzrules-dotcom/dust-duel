@@ -45,13 +45,21 @@ export function rectOf(f) {   // furniture footprint in world coords, accounting
   return { x0: f.x - w / 2, z0: f.z - d / 2, x1: f.x + w / 2, z1: f.z + d / 2 };
 }
 
+// a blocker is a box, or an oval (round furniture: bathtub, baskets, plants) filling its box
+export function blockerOf(f) { return { ...rectOf(f), oval: f.shape === 'oval' }; }
+export function insideBlocker(b, x, z, pad = 0) {
+  if (!b.oval) return x > b.x0 - pad && x < b.x1 + pad && z > b.z0 - pad && z < b.z1 + pad;
+  const a = (b.x1 - b.x0) / 2 + pad, c = (b.z1 - b.z0) / 2 + pad, dx = x - (b.x0 + b.x1) / 2, dz = z - (b.z0 + b.z1) / 2;
+  return dx * dx / (a * a) + dz * dz / (c * c) < 1;
+}
+
 export function makeInput() { return { ix: 0, iz: 0, toggle: false, use: false }; }
 
 export function createSim(layout, opts = {}) {
   const random = opts.random || Math.random;
   const MAP_W = layout.size.w, MAP_H = layout.size.h;
   const GW = Math.round(MAP_W / C.CELL), GH = Math.round(MAP_H / C.CELL);
-  const blockers = [...layout.walls, ...layout.furniture.filter(f => f.blocks !== false).map(rectOf)];
+  const blockers = [...layout.walls, ...layout.furniture.filter(f => f.blocks !== false).map(blockerOf)];
   const grid = new Uint8Array(GW * GH);
   const events = [];
   const emit = e => events.push(e);
@@ -63,7 +71,7 @@ export function createSim(layout, opts = {}) {
     for (let cz = 0; cz < GH; cz++) for (let cx = 0; cx < GW; cx++) {
       const x = -MAP_W / 2 + (cx + 0.5) * C.CELL, z = -MAP_H / 2 + (cz + 0.5) * C.CELL;
       let blocked = false;
-      for (const r of blockers) if (x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1) { blocked = true; break; }
+      for (const r of blockers) if (insideBlocker(r, x, z)) { blocked = true; break; }
       grid[cz * GW + cx] = blocked ? BLOCKED : 0;
       if (!blocked) totalCells++;
     }
@@ -141,6 +149,13 @@ export function createSim(layout, opts = {}) {
     const r = C.VAC_R;
     for (let pass = 0; pass < 2; pass++) {
       for (const b of blockers) {
+        if (b.oval) {   // push out to the oval grown by the vacuum's radius (radially: close enough for round furniture)
+          const a = (b.x1 - b.x0) / 2 + r, c = (b.z1 - b.z0) / 2 + r, ox = (b.x0 + b.x1) / 2, oz = (b.z0 + b.z1) / 2;
+          let dx = v.x - ox, dz = v.z - oz; const k = dx * dx / (a * a) + dz * dz / (c * c);
+          if (k >= 1) continue;
+          if (k < 1e-9) { dx = 0; dz = c; } else { const s = 1 / Math.sqrt(k); dx *= s; dz *= s; }
+          v.x = ox + dx; v.z = oz + dz; continue;
+        }
         const cx = Math.max(b.x0, Math.min(v.x, b.x1)), cz = Math.max(b.z0, Math.min(v.z, b.z1));
         let dx = v.x - cx, dz = v.z - cz;
         const d2 = dx * dx + dz * dz;

@@ -8,6 +8,9 @@ const IMG_W = 2920, IMG_H = 1774;
 
 // point: world (x, y, z) -> pixel (u, v).  lineX: the world line x = X, y = Y passes through pixel (u, v).
 // lineZ: the world line z = Z, y = Y passes through pixel (u, v). H = wall height (fitted).
+// The painting isn't a true perspective view (its side floor edges are almost upright while the wall caps lean out
+// steeply), so no single camera fits both. This fit favours the floor's middle; the painted floor's edges are
+// measured separately and used as the collision boundary (docs/maps/build-painted-layout.mjs → FLOOR_PX).
 const C = [
   { t: 'point', w: [0, 0, 0], p: [1450, 821] },                     // seam cross (exact: the stitch cut)
   { t: 'lineZ', Z: 0, Y: 0, p: [600, 821] }, { t: 'lineZ', Z: 0, Y: 0, p: [2300, 821] },

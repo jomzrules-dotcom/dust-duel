@@ -3,6 +3,7 @@
 // needed). Run: node docs/maps/build-painted-layout.mjs [--write]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { makeCam } from './fit-camera.mjs';
+import { rectOf, blockerOf, insideBlocker } from '../../client/sim.js';
 
 const readJSON = name => JSON.parse(readFileSync(new URL(name, import.meta.url), 'utf8').replace(/^﻿/, ''));   // files saved by Windows tools may start with a BOM
 const fit = readJSON('./painted-camera.json');
@@ -12,30 +13,44 @@ const v2 = readJSON('./house-v2.json');
 // Painted furniture: where each piece stands on the floor, in painting pixels [u0, v0, u1, v1] (its feet, not its top),
 // and the height (m) of everything painted on it (lamps, plants, the TV) for the depth occluder that keeps it in front
 // of the grime behind it. Read on house-4rooms.png.
+// A piece's top is drawn higher than its feet (~33 px per metre of height), so the back edge of a footprint is the
+// painted top edge pushed down by that much. Tables, chairs and the sofa are separate pieces (boss: "cut it out
+// cleanly"), so the vacuum can drive right up to each of them.
 const PAINTED = [
   // bedroom
   ['wardrobe', [300, 285, 470, 569], 2.5], ['basket + plant', [290, 640, 445, 737], 1.2],
   ['nightstand', [693, 270, 796, 321], 1.15], ['nightstand', [1083, 270, 1186, 321], 1.15], ['bed', [790, 205, 1080, 560], 0.9],
   // living room
   ['bookshelf', [1610, 260, 1840, 299], 1.75], ['floor lamp', [1880, 280, 1930, 300], 1.6], ['plant', [2370, 250, 2440, 292], 1.2],
-  ['tv stand', [2470, 380, 2600, 686], 1.6], ['sofa + coffee table', [1815, 395, 2160, 690], 0.85],
+  ['tv stand', [2470, 380, 2600, 686], 1.6],
+  ['sofa', [1815, 396, 2165, 558], 0.85], ['coffee table', [1885, 575, 2100, 690], 0.75],
   // bathroom
   ['sink', [250, 930, 390, 1105], 0.9], ['towel rack', [390, 905, 490, 935], 0.9], ['toilet', [245, 1160, 385, 1255], 0.75],
-  ['plant', [235, 1330, 335, 1405], 1.2], ['bathtub', [700, 990, 1050, 1180], 0.6], ['basket', [1245, 1340, 1360, 1430], 0.6],
+  ['plant', [235, 1330, 335, 1405], 1.2], ['bathtub', [680, 1000, 1075, 1185], 0.6], ['basket', [1245, 1340, 1360, 1430], 0.6],
   // kitchen
   ['fridge', [2500, 845, 2650, 990], 1.9], ['counter', [2540, 950, 2700, 1380], 1.2], ['counter', [2025, 1360, 2720, 1432], 0.95],
-  ['dining table + chairs', [1750, 975, 2200, 1290], 0.9],
+  ['dining table', [1812, 1033, 2142, 1240], 0.9],
+  ['chair', [1855, 978, 1945, 1035], 0.9], ['chair', [1995, 978, 2085, 1035], 0.9],     // back chairs
+  ['chair', [1745, 1060, 1812, 1190], 0.9], ['chair', [2142, 1060, 2200, 1190], 0.9],   // side chairs
+  ['chair', [1862, 1235, 1955, 1292], 0.9], ['chair', [2003, 1235, 2100, 1292], 0.9],   // front chairs
 ];
+// Where the painted floor meets the walls (bottom of the baseboard; the front wall's cap hides the floor from
+// v 1430), in painting pixels, unprojected with the fitted camera. The camera can't match the painting's walls
+// exactly (the AI painting isn't a true perspective view), so the outer walls' collision follows these lines
+// instead of the 26 x 16 box: back z -6.8 (was -7.6), front 6.85 (was 7.6), sides ±12.45 (was ±12.6).
+// Measured with art/house/stitch/Runs.cs: back v 242 (bedroom) / 248 (living), left u 315 @ v 600, 305 @ 850,
+// 281 @ 1140; right u 2580 @ 330, 2600 @ 720, 2602 @ 770.
+const FLOOR = { x0: -12.45, z0: -6.8, x1: 12.45, z1: 6.85 };
 const r2 = v => Math.round(v * 100) / 100;
 function footprint([u0, v0, u1, v1]) {
   const pts = [[u0, v0], [u1, v0], [u0, v1], [u1, v1]].map(p => cam.unproject(p, 0));
   const x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0])), z0 = Math.min(...pts.map(p => p[2])), z1 = Math.max(...pts.map(p => p[2]));
   return { x: r2((x0 + x1) / 2), z: r2((z0 + z1) / 2), w: r2(x1 - x0), d: r2(z1 - z0) };
 }
-// keep furniture inside the floor (x ±12.6, z ±7.6) so nothing pokes into an outer wall
+// keep furniture inside the floor so nothing pokes into an outer wall
 function clampToFloor(f) {
   let x0 = f.x - f.w / 2, x1 = f.x + f.w / 2, z0 = f.z - f.d / 2, z1 = f.z + f.d / 2;
-  x0 = Math.max(x0, -12.6); x1 = Math.min(x1, 12.6); z0 = Math.max(z0, -7.6); z1 = Math.min(z1, 7.6);
+  x0 = Math.max(x0, FLOOR.x0); x1 = Math.min(x1, FLOOR.x1); z0 = Math.max(z0, FLOOR.z0); z1 = Math.min(z1, FLOOR.z1);
   return { ...f, x: r2((x0 + x1) / 2), z: r2((z0 + z1) / 2), w: r2(x1 - x0), d: r2(z1 - z0) };
 }
 const OVAL = new Set(['bathtub', 'basket + plant', 'basket', 'plant']);   // round pieces get an oval occluder (a box would hide grime in its empty corners)
@@ -45,7 +60,13 @@ const layout = {
   name: 'Painted house',
   size: v2.size, wallHeight: r2(fit.wallH), spawnOffset: v2.spawnOffset,
   painting: { file: 'house.jpg', width: 2920, height: 1774, camera: fit },
-  rooms: v2.rooms, walls: v2.walls, furniture,
+  // outer walls run from the map edge to the painted floor edge (they aren't drawn: the painting has them);
+  // inner walls stay as in v2 (3D, drawn by the game)
+  rooms: v2.rooms, walls: [
+    { x0: -13, z0: -8, x1: 13, z1: FLOOR.z0 }, { x0: -13, z0: FLOOR.z1, x1: 13, z1: 8 },
+    { x0: -13, z0: FLOOR.z0, x1: FLOOR.x0, z1: FLOOR.z1 }, { x0: FLOOR.x1, z0: FLOOR.z0, x1: 13, z1: FLOOR.z1 },
+    ...v2.walls.filter(w => !(w.x0 <= -13 || w.x1 >= 13 || w.z0 <= -8 || w.z1 >= 8)),
+  ], furniture,
   // Docks stand against a wall on the north side of a room: the camera looks from the south, so floor right
   // behind (north of) any wall is hidden. Both sit on the inner wall, facing south: Blue in the bathroom, Orange in
   // the kitchen. Picked by sweeping positions for the fairest split (1.3%; bedroom/kitchen pairs gave 3.2–10%).
@@ -61,12 +82,11 @@ for (const arg of process.argv.slice(2)) {
 
 // ---------------------------------------------------------------- fairness check (same method as check.py)
 const RES = 0.1, VAC_R = 0.5, BRUSH_R = 0.8, W = layout.size.w, H = layout.size.h, NX = Math.round(W / RES), NZ = Math.round(H / RES);
-const rectOf = f => ({ x0: f.x - f.w / 2, z0: f.z - f.d / 2, x1: f.x + f.w / 2, z1: f.z + f.d / 2 });
-const blockers = [...layout.walls, ...layout.furniture.map(rectOf)];
+const blockers = [...layout.walls, ...layout.furniture.map(blockerOf)];
 const solid = new Uint8Array(NX * NZ);
 for (let k = 0; k < NZ; k++) for (let i = 0; i < NX; i++) {
   const x = -W / 2 + (i + 0.5) * RES, z = -H / 2 + (k + 0.5) * RES;
-  if (blockers.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1)) solid[k * NX + i] = 1;
+  if (blockers.some(b => insideBlocker(b, x, z))) solid[k * NX + i] = 1;
 }
 const disc = r => { const o = [], n = Math.ceil(r / RES); for (let a = -n; a <= n; a++) for (let b = -n; b <= n; b++) { const d = Math.hypot(a, b) * RES; if (d <= r) o.push([a, b, d]); } return o; };
 const DV = disc(VAC_R - 1e-6), DB = disc(BRUSH_R);

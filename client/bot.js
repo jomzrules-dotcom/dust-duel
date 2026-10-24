@@ -1,6 +1,6 @@
 // Dust Duel — computer opponent. Reads the sim state, returns an input like a player would.
 // Navigation: BFS on a coarse grid (0.5 units) built from the same blockers as the sim.
-import { C, BLOCKED, makeInput } from './sim.js';
+import { C, BLOCKED, makeInput, insideBlocker } from './sim.js';
 
 const NAV = 0.5;
 
@@ -14,7 +14,7 @@ export function createBot(sim, idx, opts = {}) {
   for (let nz = 0; nz < NH; nz++) for (let nx = 0; nx < NW; nx++) {
     const x = -MAP_W / 2 + (nx + 0.5) * NAV, z = -MAP_H / 2 + (nz + 0.5) * NAV;
     let ok = x > -MAP_W / 2 + pad && x < MAP_W / 2 - pad && z > -MAP_H / 2 + pad && z < MAP_H / 2 - pad;
-    for (const b of blockers) if (ok && x > b.x0 - pad && x < b.x1 + pad && z > b.z0 - pad && z < b.z1 + pad) ok = false;
+    for (const b of blockers) if (ok && insideBlocker(b, x, z, pad)) ok = false;
     pass[nz * NW + nx] = ok ? 1 : 0;
   }
   const navOf = (x, z) => [Math.max(0, Math.min(NW - 1, Math.floor((x + MAP_W / 2) / NAV))), Math.max(0, Math.min(NH - 1, Math.floor((z + MAP_H / 2) / NAV)))];

@@ -83,7 +83,14 @@ draws it as a fixed backdrop and puts only what moves or changes on top. Design:
   the height of everything painted on a piece), so grime, vacuums and inner walls behind them are hidden.
 - **Inner walls** are 3D, 1.88 m tall like the painted walls, with Codex's texture. Outer walls are painted.
 - **Rooms:** house v2 (26 × 16): bedroom, living room, kitchen, bathroom, 4 doorways. Furniture collision is
-  measured on the painting (`docs/maps/build-painted-layout.mjs`).
+  measured on the painting (`docs/maps/build-painted-layout.mjs`), one piece per thing (sofa, coffee table, dining
+  table, each chair); round pieces (bathtub, baskets, plants) collide as ovals.
+- **Outer walls' collision follows the painted floor edges**, not the 26 × 16 box: back z −6.8, front 6.85
+  (where the front wall's cap hides the floor), sides ±12.45. The painting isn't a true perspective view, so the
+  camera can't match its walls; the edges are measured on the painting instead. Check it with
+  `node docs/maps/overlay-collision.mjs <out.png>` (collision drawn over the painting).
+- **Outer walls in the painting** were redrawn straight and one colour per wall (the 4 rooms disagreed at the
+  seams) and the background made flat: `art/house/stitch/CleanWalls.cs` (house-4rooms.png → `client/assets/house.jpg`).
 - **Docks** stand on the inner wall facing south (Blue in the bathroom, Orange in the kitchen): floor right north of a
   wall is hidden from the camera, so docks can't go there. Placed by sweeping positions for the fairest split:
   **1.3%** (Blue 139.0 m² vs Orange 135.5 m²).
